@@ -9,6 +9,9 @@ Chrome's PDF viewer), and embedded fonts with fontTools and OTS (the font
 sanitizer used by Chrome and Firefox), so output opens in Chrome, Edge, Firefox,
 Adobe Acrobat and other PDF readers.
 
+**📖 New here? Follow the [step-by-step tutorial](docs/tutorial.md)** — one runnable
+example for every feature, from your first PDF to forms, encryption and scanned documents.
+
 <p align="center">
   <img src="docs/images/showcase-p1.png" width="380" alt="Sample page: text in the 14 standard fonts, shapes, JPEG image">
   <img src="docs/images/showcase-p3.png" width="380" alt="Sample page: embedded Unicode fonts, transparent PNG, rotation and watermark">
