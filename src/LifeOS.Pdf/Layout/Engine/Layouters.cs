@@ -458,6 +458,45 @@ namespace LifeOS.Pdf.Layout.Engine
         }
     }
 
+    internal sealed class BarcodeLayouter : BlockLayouter
+    {
+        private readonly BarcodeBlock _block;
+
+        public BarcodeLayouter(BarcodeBlock block)
+        {
+            _block = block;
+            SpaceBefore = block.SpaceBefore;
+            SpaceAfter = block.SpaceAfter;
+        }
+
+        public override LayoutResult Layout(LayoutContext ctx, double width, double available, bool atTop)
+        {
+            var w = Math.Min(_block.Width, width);
+            // QR codes stay square when narrowed; barcodes keep their height.
+            var h = _block.QrCode != null ? w : _block.Height;
+            if (h > available)
+            {
+                if (!atTop)
+                {
+                    return LayoutResult.Nothing;
+                }
+
+                throw new LayoutException("A " + (_block.QrCode != null ? "QR code" : "barcode") + " of " + Math.Round(h, 1) +
+                    " pt does not fit on an empty page (" + Math.Round(available, 1) + " pt). Make it smaller.");
+            }
+
+            var x = _block.Alignment == ParagraphAlignment.Center ? (width - w) / 2 : _block.Alignment == ParagraphAlignment.Right ? width - w : 0;
+            return new LayoutResult(new List<DrawItem> { new CodeItem(_block, x, 0, w, h) }, h, null);
+        }
+
+        public override void ContentWidth(LayoutContext ctx, out double min, out double max)
+        {
+            max = _block.Width;
+            // A barcode cannot shrink much without becoming unreadable.
+            min = _block.QrCode != null ? Math.Min(_block.Width, 40) : _block.Width;
+        }
+    }
+
     internal sealed class SpacerLayouter : BlockLayouter
     {
         private readonly double _height;
@@ -520,6 +559,9 @@ namespace LifeOS.Pdf.Layout.Engine
                         break;
                     case ImageBlock image:
                         result.Add(new ImageLayouter(image));
+                        break;
+                    case BarcodeBlock code:
+                        result.Add(new BarcodeLayouter(code));
                         break;
                     case SpacerBlock spacer:
                         result.Add(new SpacerLayouter(spacer.Height));

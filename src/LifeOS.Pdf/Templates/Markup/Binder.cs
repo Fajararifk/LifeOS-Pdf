@@ -336,6 +336,10 @@ namespace LifeOS.Pdf.Templates.Markup
                 case "image":
                     BindImage(container, node, scope);
                     break;
+                case "qrcode":
+                case "barcode":
+                    BindCode(container, node, scope);
+                    break;
                 case "hr":
                 {
                     var color = Color(node, "color", scope) ?? PdfColor.FromHex("#D1D5DB");
@@ -578,6 +582,51 @@ namespace LifeOS.Pdf.Templates.Markup
             }
 
             var block = container.AddImage(image, Length(node, "width", scope), Alignment(node, "align", scope) ?? ParagraphAlignment.Left);
+            block.SpaceBefore = Length(node, "spaceBefore", scope) ?? block.SpaceBefore;
+            block.SpaceAfter = Length(node, "spaceAfter", scope) ?? block.SpaceAfter;
+        }
+
+        /// <summary>&lt;qrcode value="…"/&gt; and &lt;barcode type="…" value="…"/&gt;. An empty value draws nothing.</summary>
+        private void BindCode(BlockContainer container, TemplateNode node, Scope scope)
+        {
+            var value = Attr(node, "value", scope);
+            if (string.IsNullOrEmpty(value))
+            {
+                return;
+            }
+
+            BarcodeBlock block;
+            try
+            {
+                if (node.Name == "qrcode")
+                {
+                    var ecc = Attr(node, "ecc", scope);
+                    var level = Barcodes.QrErrorCorrection.Medium;
+                    switch ((ecc ?? "M").ToUpperInvariant())
+                    {
+                        case "L": level = Barcodes.QrErrorCorrection.Low; break;
+                        case "M": level = Barcodes.QrErrorCorrection.Medium; break;
+                        case "Q": level = Barcodes.QrErrorCorrection.Quartile; break;
+                        case "H": level = Barcodes.QrErrorCorrection.High; break;
+                        default: throw node.Error("ecc must be L, M, Q or H, not '" + ecc + "'.");
+                    }
+
+                    block = container.AddQrCode(Barcodes.QrCode.Encode(value!, level), Length(node, "size", scope) ?? 90, Alignment(node, "align", scope) ?? ParagraphAlignment.Left);
+                }
+                else
+                {
+                    var type = Attr(node, "type", scope) ?? "code128";
+                    block = container.AddBarcode(Barcodes.Barcode.Create(type, value!), Length(node, "width", scope) ?? 180, Length(node, "height", scope) ?? 50,
+                        Alignment(node, "align", scope) ?? ParagraphAlignment.Left);
+                    block.ShowText = Bool(node, "showText", scope) ?? true;
+                }
+            }
+            catch (ArgumentException ex)
+            {
+                throw node.Error("Cannot create the " + node.Name + ": " + ex.Message);
+            }
+
+            block.Color = Color(node, "color", scope) ?? block.Color;
             block.SpaceBefore = Length(node, "spaceBefore", scope) ?? block.SpaceBefore;
             block.SpaceAfter = Length(node, "spaceAfter", scope) ?? block.SpaceAfter;
         }

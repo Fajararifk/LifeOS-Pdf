@@ -79,6 +79,39 @@ namespace LifeOS.Pdf.Layout
             return block;
         }
 
+        /// <summary>Adds a QR code, <paramref name="size"/> points square (quiet zone included).</summary>
+        public BarcodeBlock AddQrCode(Barcodes.QrCode qr, double size = 90, ParagraphAlignment alignment = ParagraphAlignment.Left)
+        {
+            if (qr == null)
+            {
+                throw new ArgumentNullException(nameof(qr));
+            }
+
+            Internal.PdfFormat.RequireNonNegative(size, nameof(size));
+            var block = new BarcodeBlock(qr, null, size, size, alignment);
+            BlockList.Add(block);
+            return block;
+        }
+
+        /// <summary>Encodes <paramref name="text"/> as a QR code (error correction Medium) and adds it.</summary>
+        public BarcodeBlock AddQrCode(string text, double size = 90, ParagraphAlignment alignment = ParagraphAlignment.Left) =>
+            AddQrCode(Barcodes.QrCode.Encode(text), size, alignment);
+
+        /// <summary>Adds a linear barcode; the height includes the text line when <see cref="BarcodeBlock.ShowText"/> is on.</summary>
+        public BarcodeBlock AddBarcode(Barcodes.Barcode barcode, double width = 180, double height = 50, ParagraphAlignment alignment = ParagraphAlignment.Left)
+        {
+            if (barcode == null)
+            {
+                throw new ArgumentNullException(nameof(barcode));
+            }
+
+            Internal.PdfFormat.RequireNonNegative(width, nameof(width));
+            Internal.PdfFormat.RequireNonNegative(height, nameof(height));
+            var block = new BarcodeBlock(null, barcode, width, height, alignment);
+            BlockList.Add(block);
+            return block;
+        }
+
         public SpacerBlock AddSpacer(double height)
         {
             var block = new SpacerBlock(height);

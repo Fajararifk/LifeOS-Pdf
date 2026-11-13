@@ -59,7 +59,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      - run: pip install pikepdf pypdf pypdfium2 fonttools opentype-sanitizer
+      - run: pip install pikepdf pypdf pypdfium2 fonttools opentype-sanitizer zxing-cpp
 
       - name: Run sample on every runtime
         shell: bash
@@ -81,6 +81,11 @@ jobs:
           python tools/validate_pdf.py out/*/template-invoice.pdf --expect-text "Rp24.031.500"
           python tools/validate_pdf.py out/*/template-payslip.pdf --expect-text "Rp20.414.577"
           python tools/validate_pdf.py out/*/template-*.pdf --render-dir out/png
+          python tools/validate_pdf.py out/*/barcodes.pdf --render-dir out/png \
+            --expect-code "https://github.com/Fajararifk/LifeOS-Pdf" --expect-code "https://lifeos.app/inv/2026-0042" \
+            --expect-code "INV-2026-0042" --expect-code "LIFEOS-42X" --expect-code "8991234567891" \
+            --expect-code "89912348" --expect-code "036000291452" --expect-code "18991234567898"
+          python tools/validate_pdf.py out/*/ticket.pdf --expect-code "TICKET-2026-000731"
 
       - uses: actions/upload-artifact@v4
         with:

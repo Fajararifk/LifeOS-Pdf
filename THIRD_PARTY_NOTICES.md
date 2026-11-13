@@ -30,3 +30,6 @@ with `tools/make_test_assets.py`.
 | fontTools | MIT | AFM → C# generator, test font subsetting, embedded font validation |
 | opentype-sanitizer (OTS) | BSD-3-Clause | embedded font validation (as in Chrome/Firefox) |
 | pypng | MIT | PNG test suite and reference pixels |
+| segno | BSD-3-Clause | reference QR matrices (numeric/alphanumeric) |
+| qrcode | BSD | reference QR matrices (byte mode) |
+| zxing-cpp | Apache-2.0 | reading back generated QR codes and barcodes |

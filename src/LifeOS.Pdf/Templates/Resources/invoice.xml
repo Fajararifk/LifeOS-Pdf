@@ -5,7 +5,7 @@
         Customer{Name, Address, Phone, Email},
         Items[{Name, Description, Quantity, Unit, Price}],
         Discount (amount), TaxRate (e.g. 0.11 for PPN 11%), TaxName,
-        Bank{Name, AccountNumber, AccountName}, Notes[string].
+        Bank{Name, AccountNumber, AccountName}, PaymentQr (QRIS payload, optional), Notes[string].
 -->
 <document title="Invoice {{ Number }}" author="{{ Seller.Name }}" subject="Invoice {{ Number }} untuk {{ Customer.Name }}">
   <styles>
@@ -83,11 +83,21 @@
 
     <p size="8.5" color="#4B5563" align="right" spaceBefore="2"><i>Terbilang: {{ Total | terbilang }} rupiah</i></p>
 
-    <if test="Bank">
+    <if test="Bank || PaymentQr">
       <spacer height="10"/>
-      <p size="8" bold="true" color="#6B7280" spaceAfter="2">PEMBAYARAN</p>
-      <p spaceAfter="0">Transfer ke {{ Bank.Name }} · No. rekening <b>{{ Bank.AccountNumber }}</b></p>
-      <p spaceAfter="0">a.n. {{ Bank.AccountName }}</p>
+      <table border="none" grid="none" headerBackground="none" padding="0" spaceBefore="0">
+        <column width="*"/>
+        <column width="auto" align="center"/>
+        <row>
+          <cell valign="middle">
+            <p size="8" bold="true" color="#6B7280" spaceAfter="2">PEMBAYARAN</p>
+            <p if="Bank" spaceAfter="0">Transfer ke {{ Bank.Name }} · No. rekening <b>{{ Bank.AccountNumber }}</b></p>
+            <p if="Bank" spaceAfter="0">a.n. {{ Bank.AccountName }}</p>
+            <p if="PaymentQr" size="8.5" color="#4B5563" spaceBefore="4" spaceAfter="0">Atau scan QRIS untuk membayar {{ Total | rupiah }} dari aplikasi bank atau e-wallet.</p>
+          </cell>
+          <cell><qrcode if="PaymentQr" value="{{ PaymentQr }}" size="92" align="center" spaceBefore="0" spaceAfter="0"/></cell>
+        </row>
+      </table>
     </if>
 
     <if test="Notes | count">

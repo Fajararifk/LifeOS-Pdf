@@ -16,17 +16,44 @@
     "Email": "finance@majubersama.co.id"
   },
   "Items": [
-    { "Name": "Pengembangan modul laporan PDF", "Description": "Layout engine, template invoice & slip gaji", "Quantity": 40, "Unit": "jam", "Price": 350000 },
-    { "Name": "Integrasi API LifeOS", "Description": "Endpoint export PDF untuk modul Finance", "Quantity": 16, "Unit": "jam", "Price": 350000 },
-    { "Name": "Lisensi font komersial", "Quantity": 1, "Unit": "paket", "Price": 1250000 },
-    { "Name": "Hosting & domain (1 tahun)", "Quantity": 1, "Unit": "tahun", "Price": 1800000 }
+    {
+      "Name": "Pengembangan modul laporan PDF",
+      "Description": "Layout engine, template invoice & slip gaji",
+      "Quantity": 40,
+      "Unit": "jam",
+      "Price": 350000
+    },
+    {
+      "Name": "Integrasi API LifeOS",
+      "Description": "Endpoint export PDF untuk modul Finance",
+      "Quantity": 16,
+      "Unit": "jam",
+      "Price": 350000
+    },
+    {
+      "Name": "Lisensi font komersial",
+      "Quantity": 1,
+      "Unit": "paket",
+      "Price": 1250000
+    },
+    {
+      "Name": "Hosting & domain (1 tahun)",
+      "Quantity": 1,
+      "Unit": "tahun",
+      "Price": 1800000
+    }
   ],
   "Discount": 1000000,
   "TaxRate": 0.11,
   "TaxName": "PPN",
-  "Bank": { "Name": "Bank Central Asia", "AccountNumber": "123 456 7890", "AccountName": "Fajar Digital Studio" },
+  "Bank": {
+    "Name": "Bank Central Asia",
+    "AccountNumber": "123 456 7890",
+    "AccountName": "Fajar Digital Studio"
+  },
   "Notes": [
     "Pembayaran paling lambat 14 hari setelah tanggal invoice.",
     "Mohon cantumkan nomor invoice pada berita transfer."
-  ]
+  ],
+  "PaymentQr": "00020101021226570011ID.DANA.WWW011893600915012345678902091234567890303UMI51440014ID.CO.QRIS.WWW0215ID10200000000000303UMI5204581253033605408240315005802ID5920FAJAR DIGITAL STUDIO6015JAKARTA SELATAN610512160630407F6"
 }

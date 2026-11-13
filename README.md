@@ -35,8 +35,8 @@ fonts need no font files; for TrueType fonts you ship the `.ttf` with your app.
 | 1 | TrueType fonts with full Unicode, transparent PNG, image → PDF, rotation & opacity | ✅ v0.2 |
 | 2 | Layout engine: paragraphs, multi-page tables, header/footer, kerning, font fallback | ✅ v0.3 |
 | 3 | Reports from templates (invoice, receipt, payslip, finance report, certificate) | ✅ v0.4 |
-| 4 | QR codes & barcodes (vector, PNG, SVG) | next |
-| 5 | Links, bookmarks, attachments, annotations | planned |
+| 4 | QR codes & barcodes (vector, PNG, SVG), QRIS | ✅ v0.5 |
+| 5 | Links, bookmarks, attachments, annotations | next |
 | 6 | Open existing PDFs: merge, split, watermark, compress | planned |
 | 7 | Extract text, images and tables (CSV) | planned |
 | 8 | Forms: create, fill, flatten | planned |
@@ -168,6 +168,30 @@ template.Render(new { Number = "ORD-17", Customer = customer, Items = items }).S
 Loops, conditions, variables, grouping and sums, and Indonesian/English formatting of
 money, dates and numbers in words (*terbilang*) are built in. Full reference:
 [docs/templates.md](docs/templates.md).
+
+### QR codes & barcodes
+
+Encoded from scratch and drawn as vectors (sharp at any zoom), or exported as PNG/SVG.
+Every symbol is verified to scan with an independent decoder.
+
+```csharp
+using LifeOS.Pdf.Barcodes;
+
+g.DrawQrCode(QrCode.Encode("https://lifeos.app/inv/42"), 400, 60, size: 100);
+g.DrawQrCode(QrCode.Encode(url, QrErrorCorrection.High), 400, 200, 100, logo: PdfImage.FromFile("logo.png"));
+g.DrawBarcode(Barcode.Code128("INV-2026-0042"), 72, 700, width: 200, height: 50);
+g.DrawBarcode(Barcode.Ean13("899123456789"), 300, 700, 160, 60);    // check digit added
+
+File.WriteAllBytes("qr.png", QrCode.Encode("hello").ToPng(moduleSize: 8));
+
+// QRIS: turn a merchant's static QRIS into a dynamic one for an exact amount
+var payload = Qris.WithAmount(staticQris, 125000);
+```
+
+QR (versions 1–40, error correction L/M/Q/H), Code 128, Code 39, EAN-13, EAN-8, UPC-A,
+ITF and ITF-14. Also available as `section.AddQrCode(...)`/`AddBarcode(...)` in the layout
+engine and as `<qrcode>`/`<barcode>` in templates; the built-in invoice shows a QRIS payment
+code when the data has `PaymentQr`.
 
 ### Images → PDF
 

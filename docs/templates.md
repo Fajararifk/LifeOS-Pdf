@@ -77,6 +77,8 @@ var invoice = BuiltInTemplates.Get(BuiltInTemplate.Invoice, options);
 | `row` | bg, minHeight + style | `cell` |
 | `cell` | colspan, rowspan, bg, valign (`top` `middle` `bottom`), align, padding + style | blocks or inline |
 | `image` | src, width, align, spaceBefore, spaceAfter | — |
+| `qrcode` | value, size, ecc (`L` `M` `Q` `H`), align, color, spaceBefore, spaceAfter | — |
+| `barcode` | type (`code128` `code39` `ean13` `ean8` `upca` `itf` `itf14`), value, width, height, showText, align, color | — |
 | `hr` | color, thickness, spaceBefore, spaceAfter | — |
 | `spacer` | height | — |
 | `pagebreak` | — | — |
@@ -96,6 +98,8 @@ a color, or `color width` (`#999 0.5`).
 
 Text directly inside a section, header, footer or cell becomes a paragraph. Template
 whitespace is collapsed like HTML; values inserted from data keep their own line breaks.
+
+An empty `value` on `qrcode`/`barcode` draws nothing, like an empty image `src`.
 
 ### Images
 

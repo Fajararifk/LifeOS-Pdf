@@ -63,6 +63,9 @@ namespace LifeOS.Pdf.Samples
 
             // Templates (Fase 3): every built-in template with sample JSON data.
             TemplatesSample.Run(Path.Combine(AppContext.BaseDirectory, "Assets"), outputDir);
+
+            // QR & barcodes (Fase 4).
+            BarcodesSample.Run(Path.Combine(AppContext.BaseDirectory, "Assets"), outputDir);
             return 0;
         }
 

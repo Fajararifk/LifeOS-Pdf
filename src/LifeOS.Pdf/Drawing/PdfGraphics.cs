@@ -201,6 +201,177 @@ namespace LifeOS.Pdf.Drawing
         }
 
         /// <summary>
+        /// Draws a QR code as vectors in a square of <paramref name="size"/> points at (x, y),
+        /// including the quiet zone. All dark modules form one path filled at once, so viewers
+        /// show no hairlines between modules.
+        /// </summary>
+        /// <param name="qr">The code to draw.</param>
+        /// <param name="x">Left edge.</param>
+        /// <param name="y">Top edge.</param>
+        /// <param name="size">Width and height in points, quiet zone included.</param>
+        /// <param name="dark">Module color (default black).</param>
+        /// <param name="light">Background color; null leaves the background transparent (default white).</param>
+        /// <param name="quietZone">Light border in modules; 4 is the standard minimum for reliable scanning.</param>
+        /// <param name="logo">Optional image in the center. Requires error correction Quartile or High.</param>
+        /// <param name="logoScale">Logo width as a fraction of the code width (at most 0.25).</param>
+        public void DrawQrCode(Barcodes.QrCode qr, double x, double y, double size, PdfColor? dark = null, PdfColor? light = null,
+            int quietZone = 4, PdfImage? logo = null, double logoScale = 0.2)
+        {
+            if (qr == null)
+            {
+                throw new ArgumentNullException(nameof(qr));
+            }
+
+            RequireBox(x, y, size, size);
+            if (quietZone < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(quietZone), quietZone, "The quiet zone must not be negative.");
+            }
+
+            if (logo != null)
+            {
+                if (qr.ErrorCorrection == Barcodes.QrErrorCorrection.Low || qr.ErrorCorrection == Barcodes.QrErrorCorrection.Medium)
+                {
+                    throw new ArgumentException("A logo hides part of the code: encode it with QrErrorCorrection.Quartile or High so it stays readable.", nameof(logo));
+                }
+
+                PdfFormat.RequireFinite(logoScale, nameof(logoScale));
+                if (logoScale <= 0 || logoScale > 0.25)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(logoScale), logoScale, "Logo scale must be greater than 0 and at most 0.25 of the code width.");
+                }
+            }
+
+            var modules = qr.Size + 2 * quietZone;
+            var unit = size / modules;
+            var background = light ?? PdfColor.White;
+            Begin();
+            Op(ColorOperands(background), "rg");
+            Op(N(x), N(Y(y) - size), N(size), N(size), "re", "f");
+            Op(ColorOperands(dark ?? PdfColor.Black), "rg");
+            var any = false;
+            for (var row = 0; row < qr.Size; row++)
+            {
+                var col = 0;
+                while (col < qr.Size)
+                {
+                    if (!qr.IsDark(col, row))
+                    {
+                        col++;
+                        continue;
+                    }
+
+                    var start = col;
+                    while (col < qr.Size && qr.IsDark(col, row))
+                    {
+                        col++;
+                    }
+
+                    var top = y + (row + quietZone) * unit;
+                    Op(N(x + (start + quietZone) * unit), N(Y(top) - unit), N((col - start) * unit), N(unit), "re");
+                    any = true;
+                }
+            }
+
+            if (any)
+            {
+                Op("f");
+            }
+
+            End();
+
+            if (logo != null)
+            {
+                // A light pad around the logo keeps its edge from touching modules.
+                var w = size * logoScale;
+                var h = w * logo.PixelHeight / logo.PixelWidth;
+                var pad = unit;
+                var cx = x + size / 2;
+                var cy = y + size / 2;
+                FillRectangle(background, cx - w / 2 - pad, cy - h / 2 - pad, w + 2 * pad, h + 2 * pad);
+                DrawImage(logo, cx - w / 2, cy - h / 2, w, h);
+            }
+        }
+
+        /// <summary>
+        /// Draws a linear barcode as vectors in the box (x, y, width, height). The box includes the
+        /// quiet zones; with <paramref name="showText"/> the human-readable text sits under the bars.
+        /// </summary>
+        /// <param name="barcode">The barcode to draw.</param>
+        /// <param name="x">Left edge.</param>
+        /// <param name="y">Top edge.</param>
+        /// <param name="width">Total width in points, quiet zones included.</param>
+        /// <param name="height">Total height in points, text included.</param>
+        /// <param name="dark">Bar color (default black).</param>
+        /// <param name="light">Background color; default white.</param>
+        /// <param name="showText">Print <see cref="Barcodes.Barcode.Text"/> centered below the bars.</param>
+        /// <param name="font">Font of the text (default Helvetica, sized to fit).</param>
+        public void DrawBarcode(Barcodes.Barcode barcode, double x, double y, double width, double height, PdfColor? dark = null, PdfColor? light = null,
+            bool showText = true, PdfFont? font = null)
+        {
+            if (barcode == null)
+            {
+                throw new ArgumentNullException(nameof(barcode));
+            }
+
+            RequireBox(x, y, width, height);
+            var quiet = barcode.QuietZone;
+            var unit = width / (barcode.ModuleCount + 2 * quiet);
+            var textFont = font;
+            double textHeight = 0;
+            if (showText)
+            {
+                // Default: as large as possible up to 10 pt while the text fits under the bars.
+                textFont = font ?? new PdfFont(Fonts.StandardFont.Helvetica, 10);
+                var available = barcode.ModuleCount * unit;
+                var measured = textFont.MeasureWidth(barcode.Text);
+                if (font == null && measured > available && measured > 0)
+                {
+                    textFont = textFont.WithSize(Math.Max(4, 10 * available / measured));
+                }
+
+                // Text line plus a gap of a quarter of the font size between bars and text.
+                textHeight = textFont.Size * 1.45;
+            }
+
+            var barHeight = height - textHeight;
+            if (barHeight <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(height), height, "The height leaves no room for bars under the text; make it larger or set showText: false.");
+            }
+
+            Begin();
+            Op(ColorOperands(light ?? PdfColor.White), "rg");
+            Op(N(x), N(Y(y) - height), N(width), N(height), "re", "f");
+            Op(ColorOperands(dark ?? PdfColor.Black), "rg");
+            var i = 0;
+            while (i < barcode.ModuleCount)
+            {
+                if (!barcode.IsBar(i))
+                {
+                    i++;
+                    continue;
+                }
+
+                var start = i;
+                while (i < barcode.ModuleCount && barcode.IsBar(i))
+                {
+                    i++;
+                }
+
+                Op(N(x + (start + quiet) * unit), N(Y(y) - barHeight), N((i - start) * unit), N(barHeight), "re");
+            }
+
+            Op("f");
+            End();
+
+            if (showText)
+            {
+                DrawText(barcode.Text, textFont!, x + width / 2, y + barHeight + textFont!.Size * 0.25, dark ?? PdfColor.Black, TextAlign.Center);
+            }
+        }
+
+        /// <summary>
         /// Saves the graphics state. Use with <c>using</c>; transformations, opacity and
         /// clipping set afterwards are undone when the returned object is disposed.
         /// </summary>

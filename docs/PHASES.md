@@ -59,7 +59,7 @@ nol tidak realistis (browser engine, OCR).
 | 4 | Buat, ekstrak teks, merge, split, isi form, enkripsi | 6, 7, 8, 9 | Dari nol |
 | 5 | Membuat & convert PDF (gambar↔PDF, PDF→teks/CSV, PDF/A) | 1 ✅ (gambar→PDF), 7, 10, 12 | Dari nol + integrasi render |
 | 6 | Laporan PDF dari template | 3 ✅ | Dari nol |
-| 7 | Gambar QR untuk ditempel ke PDF | 4 | Dari nol (vektor di PDF + PNG/SVG) |
+| 7 | Gambar QR untuk ditempel ke PDF | 4 ✅ | Dari nol (vektor di PDF + PNG/SVG) |
 | 8 | Baca QR/barcode dari gambar | 10 | Integrasi: ZXing.Net (Apache-2.0) |
 | 9 | Ambil teks dari PDF hasil scan (OCR) | 10 | Integrasi: Tesseract (Apache-2.0) |
 | 10 | Baca barcode/QR + OCR dari PDF | 10 | Render PDFium → ZXing + Tesseract |
@@ -76,7 +76,7 @@ parser (merge, ekstrak, form) menyusul, lalu integrasi engine eksternal di akhir
 | Font TrueType + Unicode, PNG | ✓ | ✓ | ✓ | Fase 1 ✅ |
 | Layout engine (tabel, flow, header/footer) | MigraDoc | ✓ | ✓ | Fase 2 ✅ |
 | Laporan dari template | – | pdfHTML | ✓ | Fase 3 ✅ |
-| QR & barcode (buat) | – | ✓ | ✓ | Fase 4 |
+| QR & barcode (buat) | – | ✓ | ✓ | Fase 4 ✅ |
 | Link, bookmark, lampiran | ✓ | ✓ | ✓ | Fase 5 |
 | Buka/merge/split/watermark/kompres | ✓ | ✓ | ✓ | Fase 6 |
 | Ekstrak teks/gambar/tabel, redaksi | – | ✓ | ✓ | Fase 7 |
@@ -134,7 +134,8 @@ SPESIFIKASI:
   bulanan (cocok untuk export LifeOS), sertifikat.
 - Template disimpan sebagai file (JSON/XML) supaya bisa diedit tanpa compile ulang.
 
-## FASE 4 — QR & Barcode (v0.5)  · use case 7
+## FASE 4 — QR & Barcode ✅ (v0.5)  · use case 7
+Selesai (QR, Code 128/39, EAN-13/8, UPC-A, ITF/ITF-14, QRIS). DataMatrix → Fase 4b (backlog).
 SPESIFIKASI:
 - Encoder QR dari nol (ISO/IEC 18004: mode numeric/alnum/byte, versi 1–40,
   ECC L/M/Q/H, masking), termasuk QRIS-ready payload string.

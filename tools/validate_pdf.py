@@ -10,9 +10,11 @@ Embedded fonts (FontFile2) are additionally checked with:
   * fontTools           - decompiles every table and glyph, recompiles the font
   * OTS                 - the OpenType Sanitizer used by Chrome and Firefox
 
+QR codes and barcodes (--expect-code) are read back with zxing-cpp from the PDFium render.
+
 Usage:
-    pip install pikepdf pypdf pypdfium2 fonttools opentype-sanitizer
-    python tools/validate_pdf.py file.pdf [more.pdf ...] [--expect-text "Halaman 1"] [--render-dir out/png]
+    pip install pikepdf pypdf pypdfium2 fonttools opentype-sanitizer zxing-cpp
+    python tools/validate_pdf.py file.pdf [more.pdf ...] [--expect-text "Halaman 1"] [--expect-code "INV-42"] [--render-dir out/png]
 
 Exit code 0 = all files valid.
 """
@@ -84,7 +86,20 @@ def render(path: str, render_dir: str | None) -> list[str]:
     return problems
 
 
-def validate(path: str, expected_texts: list[str], render_dir: str | None = None) -> list[str]:
+def decode_codes(path: str) -> set[str]:
+    """Texts of all QR codes and barcodes zxing-cpp finds on the rendered pages."""
+    import zxingcpp  # optional: only needed with --expect-code
+
+    found = set()
+    doc = pypdfium2.PdfDocument(path)
+    for i in range(len(doc)):
+        image = doc[i].render(scale=3).to_pil()
+        for result in zxingcpp.read_barcodes(image):
+            found.add(result.text)
+    return found
+
+
+def validate(path: str, expected_texts: list[str], render_dir: str | None = None, expected_codes: list[str] | None = None) -> list[str]:
     problems: list[str] = []
 
     with pikepdf.open(path) as pdf:
@@ -105,6 +120,13 @@ def validate(path: str, expected_texts: list[str], render_dir: str | None = None
 
     problems.extend(render(path, render_dir))
 
+    if expected_codes:
+        found = decode_codes(path)
+        for code in expected_codes:
+            # UPC-A is reported by zxing as EAN-13 with a leading zero.
+            if code not in found and "0" + code not in found:
+                problems.append(f"barcode/QR not readable or missing: {code!r} (decoded: {sorted(found)})")
+
     print(f"{path}: {page_count} page(s), {font_count} embedded font(s), "
           f"qpdf+pypdf+pdfium+fonttools+ots {'OK' if not problems else 'FAILED'}")
     return problems
@@ -115,11 +137,12 @@ def main() -> int:
     parser.add_argument("files", nargs="+")
     parser.add_argument("--expect-text", action="append", default=[])
     parser.add_argument("--render-dir", default=None, help="save a PNG of every page here")
+    parser.add_argument("--expect-code", action="append", default=[], help="text of a QR/barcode that must be readable")
     args = parser.parse_args()
 
     failed = False
     for f in args.files:
-        for p in validate(f, args.expect_text, args.render_dir):
+        for p in validate(f, args.expect_text, args.render_dir, args.expect_code):
             failed = True
             print("  - " + p)
     return 1 if failed else 0

@@ -66,7 +66,7 @@ Setelah perubahan kode:
 dotnet build -c Release
 dotnet test -c Release
 ```
-Sebelum tutup fase (butuh `pip install pikepdf pypdf pypdfium2 fonttools opentype-sanitizer`):
+Sebelum tutup fase (butuh `pip install pikepdf pypdf pypdfium2 fonttools opentype-sanitizer zxing-cpp`):
 ```
 dotnet run --project samples/LifeOS.Pdf.Samples -f net8.0 -- out/net8.0
 python tools/validate_pdf.py out/*/showcase.pdf --render-dir out/png

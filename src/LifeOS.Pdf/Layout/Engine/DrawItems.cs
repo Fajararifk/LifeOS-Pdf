@@ -144,6 +144,47 @@ namespace LifeOS.Pdf.Layout.Engine
         public override void Draw(PdfGraphics g) => g.DrawImage(Image, X, Y, Width, Height);
     }
 
+    /// <summary>A QR code or linear barcode, drawn as vectors.</summary>
+    internal sealed class CodeItem : DrawItem
+    {
+        private readonly BarcodeBlock _block;
+
+        public CodeItem(BarcodeBlock block, double x, double y, double width, double height)
+        {
+            _block = block;
+            X = x;
+            Y = y;
+            Width = width;
+            Height = height;
+        }
+
+        public double X { get; private set; }
+
+        public double Y { get; private set; }
+
+        public double Width { get; }
+
+        public double Height { get; }
+
+        public override void Translate(double dx, double dy)
+        {
+            X += dx;
+            Y += dy;
+        }
+
+        public override void Draw(PdfGraphics g)
+        {
+            if (_block.QrCode != null)
+            {
+                g.DrawQrCode(_block.QrCode, X, Y, Width, _block.Color);
+            }
+            else
+            {
+                g.DrawBarcode(_block.Barcode!, X, Y, Width, Height, _block.Color, showText: _block.ShowText);
+            }
+        }
+    }
+
     internal static class DrawItemList
     {
         public static void TranslateAll(List<DrawItem> items, double dx, double dy)

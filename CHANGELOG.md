@@ -3,6 +3,21 @@
 Format: [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 Before v1.0, a minor version may contain breaking changes (always listed here).
 
+## [0.5.0] — Phase 4: QR codes & barcodes
+
+### Added
+- `QrCode`: QR Code Model 2 encoder written from ISO/IEC 18004 — numeric, alphanumeric and
+  byte (UTF-8) modes, versions 1–40, error correction L/M/Q/H, automatic or fixed mask;
+  `ToPng`, `ToSvg`.
+- `Barcode`: Code 128 (automatic A/B/C sets), Code 39 (optional mod-43 check), EAN-13, EAN-8,
+  UPC-A, ITF, ITF-14 with check digits calculated or verified; `ToPng`, `ToSvg`.
+- `PdfGraphics.DrawQrCode` (one vector path, optional logo with ECC Q/H) and
+  `PdfGraphics.DrawBarcode` (bars + human-readable text).
+- `Qris`: CRC-16/CCITT-FALSE, payload validation and parsing, static → dynamic with an amount.
+- Layout engine: `AddQrCode`, `AddBarcode` (`BarcodeBlock`); templates: `<qrcode>`, `<barcode>`.
+- Built-in invoice template: optional QRIS payment code (`PaymentQr`).
+- Internal PNG writer (used for exports).
+
 ## [0.4.0] — Phase 3: Report templates
 
 ### Added

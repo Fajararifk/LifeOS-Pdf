@@ -19,7 +19,7 @@ namespace LifeOS.Pdf.Templates.Markup
         private static readonly string[] ParagraphAttributes =
             { "align", "spaceBefore", "spaceAfter", "indent", "rightIndent", "firstIndent", "lineSpacing", "keepWithNext", "keepTogether", "pageBreakBefore" };
 
-        private static readonly string[] Blocks = { "h1", "h2", "h3", "p", "list", "table", "image", "hr", "spacer", "pagebreak" };
+        private static readonly string[] Blocks = { "h1", "h2", "h3", "p", "list", "table", "image", "qrcode", "barcode", "hr", "spacer", "pagebreak" };
         private static readonly string[] Inlines = { TemplateNode.TextName, "b", "i", "u", "s", "span", "br", "pageNumber", "pageCount" };
         private static readonly string[] Control = { "foreach", "if", "else", "set" };
 
@@ -58,6 +58,8 @@ namespace LifeOS.Pdf.Templates.Markup
             ["row"] = new Rule(new[] { "bg", "minHeight" }.Concat(StyleAttributes).ToArray(), new[] { "cell" }),
             ["cell"] = new Rule(new[] { "colspan", "rowspan", "bg", "valign", "align", "padding" }.Concat(StyleAttributes).ToArray(), Blocks.Concat(Inlines).ToArray()),
             ["image"] = new Rule(new[] { "src", "width", "align", "spaceBefore", "spaceAfter" }, new string[0]),
+            ["qrcode"] = new Rule(new[] { "value", "size", "ecc", "align", "color", "spaceBefore", "spaceAfter" }, new string[0]),
+            ["barcode"] = new Rule(new[] { "type", "value", "width", "height", "showText", "align", "color", "spaceBefore", "spaceAfter" }, new string[0]),
             ["hr"] = new Rule(new[] { "color", "thickness", "spaceBefore", "spaceAfter" }, new string[0]),
             ["spacer"] = new Rule(new[] { "height" }, new string[0]),
             ["pagebreak"] = new Rule(new string[0], new string[0]),
