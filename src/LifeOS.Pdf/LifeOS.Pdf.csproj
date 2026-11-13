@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(LifeOsLibraryTargets)</TargetFrameworks>
+    <RootNamespace>LifeOS.Pdf</RootNamespace>
+    <PackageId>LifeOS.Pdf</PackageId>
+    <Description>Open-source PDF library for .NET, written from scratch. Create PDF documents with text, shapes and images. Works on .NET Standard 2.0 and .NET 5 through .NET 10.</Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Self-explanatory members (R, G, B, A4, ...) do not need XML docs. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <InternalsVisibleTo Include="LifeOS.Pdf.Tests" />
+  </ItemGroup>
+
+</Project>

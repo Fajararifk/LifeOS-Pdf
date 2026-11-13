@@ -1,0 +1,13 @@
+bin/
+obj/
+out/
+*.user
+*.suo
+.vs/
+.idea/
+TestResults/
+artifacts/
+*.nupkg
+*.snupkg
+# Generated sample output
+samples/**/output/

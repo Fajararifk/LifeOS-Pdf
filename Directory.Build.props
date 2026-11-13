@@ -1,0 +1,42 @@
+<Project>
+  <!--
+    Shared build settings for every project in the repo.
+    Target matrix lives here so all modules support the same runtimes.
+  -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- net5.0 / net7.0 are end-of-life but explicitly supported by this library. -->
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+    <Deterministic>true</Deterministic>
+
+    <Authors>Fajararifk</Authors>
+    <Copyright>Copyright (c) 2026 Fajararifk</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/Fajararifk/LifeOS-Pdf</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Fajararifk/LifeOS-Pdf</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>pdf;pdf-generation;dotnet;csharp</PackageTags>
+    <VersionPrefix>0.1.0</VersionPrefix>
+  </PropertyGroup>
+
+  <!--
+    .NET 10 is added automatically when building with the .NET SDK 10 or newer.
+    NETCoreSdkVersion is not defined yet at this point, so the SDK major version is
+    read from the SDK folder name (…/dotnet/sdk/9.0.203/). Inside Visual Studio's own
+    MSBuild the folder has no version and net10.0 is simply skipped.
+  -->
+  <PropertyGroup>
+    <LifeOsSdkFolder>$([System.IO.Path]::GetFileName('$(MSBuildBinPath)'))</LifeOsSdkFolder>
+    <LifeOsSdkMajor>0</LifeOsSdkMajor>
+    <LifeOsSdkMajor Condition="$(LifeOsSdkFolder.IndexOf('.')) &gt; 0">$(LifeOsSdkFolder.Substring(0, $(LifeOsSdkFolder.IndexOf('.'))))</LifeOsSdkMajor>
+    <LifeOsSdkHasNet10>false</LifeOsSdkHasNet10>
+    <LifeOsSdkHasNet10 Condition="$(LifeOsSdkMajor) &gt;= 10">true</LifeOsSdkHasNet10>
+    <LifeOsLibraryTargets>netstandard2.0;net5.0;net6.0;net7.0;net8.0;net9.0</LifeOsLibraryTargets>
+    <LifeOsLibraryTargets Condition="'$(LifeOsSdkHasNet10)' == 'true'">$(LifeOsLibraryTargets);net10.0</LifeOsLibraryTargets>
+    <LifeOsTestTargets>net8.0;net9.0</LifeOsTestTargets>
+    <LifeOsTestTargets Condition="'$(LifeOsSdkHasNet10)' == 'true'">$(LifeOsTestTargets);net10.0</LifeOsTestTargets>
+  </PropertyGroup>
+</Project>
