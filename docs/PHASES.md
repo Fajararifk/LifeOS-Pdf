@@ -72,23 +72,23 @@ parser (merge, ekstrak, form) menyusul, lalu integrasi engine eksternal di akhir
 
 ## Peta fitur vs library lain
 
-| Kemampuan | PDFsharp | iText | ByteScout | LifeOS.Pdf |
-|---|---|---|---|---|
-| Buat PDF (teks, shape, gambar) | ✓ | ✓ | ✓ | Fase 0 ✅ |
-| Font TrueType + Unicode, PNG | ✓ | ✓ | ✓ | Fase 1 ✅ |
-| Layout engine (tabel, flow, header/footer) | MigraDoc | ✓ | ✓ | Fase 2 ✅ |
-| Laporan dari template | – | pdfHTML | ✓ | Fase 3 ✅ |
-| QR & barcode (buat) | – | ✓ | ✓ | Fase 4 ✅ |
-| Link, bookmark, lampiran | ✓ | ✓ | ✓ | Fase 5 ✅ |
-| Buka/merge/split/watermark/kompres | ✓ | ✓ | ✓ | Fase 6 ✅ |
-| Ekstrak teks/gambar/tabel, redaksi | – | ✓ | ✓ | Fase 7 ✅ |
-| Form (AcroForm) | sebagian | ✓ | ✓ | Fase 8 |
-| Enkripsi & tanda tangan digital | sebagian | ✓ | ✓ | Fase 9 |
-| Render, scan QR/barcode, OCR | – | add-on | ✓ | Fase 10 (integrasi) |
-| HTML → PDF | – | pdfHTML | ✓ | Fase 11 (integrasi) |
-| Office (Excel/Word/PowerPoint) → PDF | – | sebagian | ✓ | Fase 12 |
-| Grafik, Markdown → PDF, PDF → Excel | – | – | sebagian | Fase 13 |
-| PDF/A, PDF/UA, layer, gradien | sebagian | ✓ | sebagian | Fase 14 |
+| Kemampuan | PDFsharp | ByteScout | LifeOS.Pdf |
+|---|---|---|---|
+| Buat PDF (teks, shape, gambar) | ✓ | ✓ | Fase 0 ✅ |
+| Font TrueType + Unicode, PNG | ✓ | ✓ | Fase 1 ✅ |
+| Layout engine (tabel, flow, header/footer) | MigraDoc | ✓ | Fase 2 ✅ |
+| Laporan dari template | – | ✓ | Fase 3 ✅ |
+| QR & barcode (buat) | – | ✓ | Fase 4 ✅ |
+| Link, bookmark, lampiran | ✓ | ✓ | Fase 5 ✅ |
+| Buka/merge/split/watermark/kompres | ✓ | ✓ | Fase 6 ✅ |
+| Ekstrak teks/gambar/tabel, redaksi | – | ✓ | Fase 7 ✅ |
+| Form (AcroForm) | sebagian | ✓ | Fase 8 |
+| Enkripsi & tanda tangan digital | sebagian | ✓ | Fase 9 |
+| Render, scan QR/barcode, OCR | – | ✓ | Fase 10 (dari nol) |
+| HTML → PDF | – | ✓ | Fase 11 (integrasi) |
+| Office (Excel/Word/PowerPoint) → PDF | – | ✓ | Fase 12 |
+| Grafik, Markdown → PDF, PDF → Excel | – | sebagian | Fase 13 |
+| PDF/A, PDF/UA, layer, gradien | sebagian | sebagian | Fase 14 |
 
 ---
 
@@ -235,8 +235,8 @@ SPESIFIKASI:
 - Model data sederhana (`Workbook`/`Sheet`/`Cell`) supaya data bisa diubah di kode sebelum disimpan
   ke PDF (dan disimpan balik ke CSV/xlsx). Edit visual seperti Excel di luar scope.
 
-## FASE 13 — Grafik, Markdown, Export Excel & paritas iText (v1.4)  · use case 12
-SPESIFIKASI (tambahan paritas iText — lihat tabel "Paritas fitur dengan iText"): ekstraksi data
+## FASE 13 — Grafik, Markdown, Export Excel & fitur lanjutan (v1.4)  · use case 12
+SPESIFIKASI (tambahan — lihat tabel "Target fitur lengkap"): ekstraksi data
 berbasis zona, optimizer, aksara kompleks + bidi, hyphenation Indonesia, layout multi-kolom/float,
 font OTF/CFF/Type1/Type3, gambar GIF/BMP/TIFF/JPX/JBIG2.
 - **Grafik vektor**: bar, stacked bar, line, area, pie, donut, sparkline di layout engine
@@ -254,12 +254,12 @@ SPESIFIKASI:
 
 ---
 
-## Paritas fitur dengan iText (target)
-Target: semua yang bisa dilakukan iText (Core + add-on) juga bisa dilakukan LifeOS.Pdf — **fiturnya
-ditiru, kodenya ditulis sendiri dari nol** berdasarkan ISO 32000 dan standar terkait. Kode iText
-(AGPL) tidak boleh dibaca untuk disalin atau ditiru baris per baris (CLAUDE.md #6).
+## Target fitur lengkap
+Target: kemampuan setara library PDF komersial terlengkap — **semuanya ditulis sendiri dari nol**
+berdasarkan ISO 32000 dan standar terkait. Kode library lain berlisensi AGPL/proprietary tidak
+boleh disalin (CLAUDE.md #6).
 
-| Fitur iText | Status LifeOS.Pdf | Fase |
+| Fitur | Status LifeOS.Pdf | Fase |
 |---|---|---|
 | Layout: paragraf, tabel, list, gambar, header/footer | ✅ | 2 |
 | Template laporan | ✅ (XML + ekspresi) | 3 |
@@ -268,7 +268,7 @@ ditiru, kodenya ditulis sendiri dari nol** berdasarkan ISO 32000 dan standar ter
 | Link, bookmark, lampiran, anotasi dasar | ✅ | 5 |
 | Anotasi lengkap: FreeText, Line, Square/Circle, Polygon, Ink, Popup, FileAttachment, Redact | ⏳ | 5b |
 | Buka/edit/merge/split/stamp, n-up, kompres dasar | ✅ | 6 |
-| Ekstraksi teks + lokasi, gambar, tabel, redaksi (pdfSweep) | ✅ | 7 |
+| Ekstraksi teks + lokasi, gambar, tabel, redaksi | ✅ | 7 |
 | Form AcroForm: buat, isi, ratakan, validasi format | ⏳ | 8 |
 | Ratakan form XFA (dibaca, dirender jadi konten statis) | ⏳ | 8 |
 | Enkripsi password (RC4, AES-128/256) + izin | ⏳ | 9 |
@@ -276,15 +276,15 @@ ditiru, kodenya ditulis sendiri dari nol** berdasarkan ISO 32000 dan standar ter
 | Tanda tangan digital PAdES B-B/B-T/B-LT/B-LTA, timestamp (TSA), OCSP/CRL, LTV | ⏳ | 9 |
 | Validasi tanda tangan, tanda tangan berganda, certification signature | ⏳ | 9 |
 | Simpan incremental (append), dibutuhkan untuk tanda tangan | ⏳ | 9 |
-| PDF → gambar (pdfRender) | ⏳ dari nol | 10 |
+| PDF → gambar | ⏳ dari nol | 10 |
 | Baca QR/barcode dari gambar & PDF | ⏳ dari nol | 10 |
-| OCR (pdfOCR, di iText memakai Tesseract) | ⏳ dari nol (klasik, lalu model LifeOS) | 10 |
-| HTML/CSS → PDF (pdfHTML), CSS paged media | ⏳ | 11 |
+| OCR | ⏳ dari nol (klasik, lalu model LifeOS) | 10 |
+| HTML/CSS → PDF, CSS paged media | ⏳ | 11 |
 | SVG → PDF (vektor) | ⏳ | 11 |
-| Office → PDF (pdfOffice) | ⏳ | 12 |
-| Ekstraksi data berbasis template zona (pdf2Data) | ⏳ | 13 |
-| Optimasi (pdfOptimizer): downsample gambar, dedup objek, gabung font, buang yang tak terpakai | ⏳ (sebagian ✅ di Fase 6) | 13 |
-| Aksara kompleks (pdfCalligraph): shaping Arab, Thai, India; teks kanan-ke-kiri (bidi) | ⏳ | 13 |
+| Office → PDF | ⏳ | 12 |
+| Ekstraksi data berbasis template zona | ⏳ | 13 |
+| Optimasi: downsample gambar, dedup objek, gabung font, buang yang tak terpakai | ⏳ (sebagian ✅ di Fase 6) | 13 |
+| Aksara kompleks: shaping Arab, Thai, India; teks kanan-ke-kiri (bidi) | ⏳ | 13 |
 | Pemenggalan kata (hyphenation), termasuk Bahasa Indonesia | ⏳ | 13 |
 | Layout lanjutan: multi-kolom mengalir, elemen float, teks mengelilingi gambar | ⏳ | 13 |
 | Font OpenType CFF (.otf), Type1, Type3; koleksi .ttc | ⏳ (TrueType ✅) | 13 |
@@ -292,7 +292,7 @@ ditiru, kodenya ditulis sendiri dari nol** berdasarkan ISO 32000 dan standar ter
 | Transparansi grup, blend mode, gradien, pattern, layer (OCG) | ⏳ | 14 |
 | PDF/A-1/2/3/4, PDF/UA-1/2 (tagged PDF), XMP metadata | ⏳ | 14 |
 | E-invoice ZUGFeRD/Factur-X | ⏳ | 14 |
-| Bandingkan dua PDF (CompareTool) | ⏳ | backlog |
+| Bandingkan dua PDF | ⏳ | backlog |
 
 Yang **sengaja tidak** ditiru: menjalankan atau menambahkan JavaScript ke dokumen (risiko keamanan).
 
