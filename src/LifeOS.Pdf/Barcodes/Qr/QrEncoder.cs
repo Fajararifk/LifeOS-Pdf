@@ -493,9 +493,20 @@ namespace LifeOS.Pdf.Barcodes.Qr
             }
         }
 
-        private static void ApplyMask(QrMatrix m, int mask)
+        // Mask patterns per version (index [version * 8 + mask]), built on first use. The array
+        // holds immutable data, so a race only means a pattern is computed twice.
+        private static readonly bool[]?[] MaskPatterns = new bool[]?[41 * 8];
+
+        private static bool[] MaskPattern(int version, int mask)
         {
-            var size = m.Size;
+            var pattern = MaskPatterns[version * 8 + mask];
+            if (pattern != null)
+            {
+                return pattern;
+            }
+
+            var size = version * 4 + 17;
+            pattern = new bool[size * size];
             for (var y = 0; y < size; y++)
             {
                 for (var x = 0; x < size; x++)
@@ -513,10 +524,25 @@ namespace LifeOS.Pdf.Barcodes.Qr
                         default: invert = ((x + y) % 2 + x * y % 3) % 2 == 0; break;
                     }
 
-                    if (invert && !m.IsFunction(x, y))
-                    {
-                        m.Set(x, y, !m.IsDark(x, y));
-                    }
+                    pattern[y * size + x] = invert;
+                }
+            }
+
+            MaskPatterns[version * 8 + mask] = pattern;
+            return pattern;
+        }
+
+        private static void ApplyMask(QrMatrix m, int mask)
+        {
+            // XOR the mask pattern into every non-function module (§7.8.2).
+            var pattern = MaskPattern(m.Version, mask);
+            var dark = m.Modules;
+            var function = m.Functions;
+            for (var i = 0; i < dark.Length; i++)
+            {
+                if (pattern[i] && !function[i])
+                {
+                    dark[i] = !dark[i];
                 }
             }
         }
@@ -525,6 +551,7 @@ namespace LifeOS.Pdf.Barcodes.Qr
         internal static int Penalty(QrMatrix m)
         {
             var size = m.Size;
+            var g = m.Modules;
             var result = 0;
             var history = new int[7];
 
@@ -535,10 +562,12 @@ namespace LifeOS.Pdf.Barcodes.Qr
                 {
                     var runColor = false;
                     var runLength = 0;
-                    Array.Clear(history, 0, history.Length);
-                    for (var b = 0; b < size; b++)
+                    Array.Clear(history, 0, 7);
+                    var index = pass == 0 ? a * size : a;
+                    var step = pass == 0 ? 1 : size;
+                    for (var b = 0; b < size; b++, index += step)
                     {
-                        var dark = pass == 0 ? m.IsDark(b, a) : m.IsDark(a, b);
+                        var dark = g[index];
                         if (dark == runColor)
                         {
                             runLength++;
@@ -568,28 +597,22 @@ namespace LifeOS.Pdf.Barcodes.Qr
                 }
             }
 
-            // N2: 2×2 blocks of the same color.
-            for (var y = 0; y < size - 1; y++)
-            {
-                for (var x = 0; x < size - 1; x++)
-                {
-                    var c = m.IsDark(x, y);
-                    if (c == m.IsDark(x + 1, y) && c == m.IsDark(x, y + 1) && c == m.IsDark(x + 1, y + 1))
-                    {
-                        result += N2;
-                    }
-                }
-            }
-
-            // N4: deviation of the dark proportion from 50%, in steps of 5%.
+            // N2: 2×2 blocks of the same color. N4: proportion of dark modules.
             var darkCount = 0;
             for (var y = 0; y < size; y++)
             {
+                var row = y * size;
                 for (var x = 0; x < size; x++)
                 {
-                    if (m.IsDark(x, y))
+                    var c = g[row + x];
+                    if (c)
                     {
                         darkCount++;
+                    }
+
+                    if (y < size - 1 && x < size - 1 && c == g[row + x + 1] && c == g[row + size + x] && c == g[row + size + x + 1])
+                    {
+                        result += N2;
                     }
                 }
             }
@@ -627,7 +650,12 @@ namespace LifeOS.Pdf.Barcodes.Qr
                 runLength += size; // light border before the first run
             }
 
-            Array.Copy(history, 0, history, 1, history.Length - 1);
+            history[6] = history[5];
+            history[5] = history[4];
+            history[4] = history[3];
+            history[3] = history[2];
+            history[2] = history[1];
+            history[1] = history[0];
             history[0] = runLength;
         }
 
@@ -663,19 +691,16 @@ namespace LifeOS.Pdf.Barcodes.Qr
         }
     }
 
-    /// <summary>Module grid of a QR symbol under construction.</summary>
+    /// <summary>Module grid of a QR symbol under construction (flat row-major arrays).</summary>
     internal sealed class QrMatrix
     {
-        private readonly bool[,] _dark;
-        private readonly bool[,] _function;
-
         public QrMatrix(int version, QrErrorCorrection ecl)
         {
             Version = version;
             ErrorCorrection = ecl;
             Size = version * 4 + 17;
-            _dark = new bool[Size, Size];
-            _function = new bool[Size, Size];
+            Modules = new bool[Size * Size];
+            Functions = new bool[Size * Size];
         }
 
         public int Version { get; }
@@ -686,16 +711,22 @@ namespace LifeOS.Pdf.Barcodes.Qr
 
         public int Mask { get; set; }
 
-        public bool IsDark(int x, int y) => _dark[y, x];
+        /// <summary>Dark modules, index y * Size + x.</summary>
+        public bool[] Modules { get; }
 
-        public bool IsFunction(int x, int y) => _function[y, x];
+        /// <summary>Function-pattern modules (never masked), index y * Size + x.</summary>
+        public bool[] Functions { get; }
 
-        public void Set(int x, int y, bool dark) => _dark[y, x] = dark;
+        public bool IsDark(int x, int y) => Modules[y * Size + x];
+
+        public bool IsFunction(int x, int y) => Functions[y * Size + x];
+
+        public void Set(int x, int y, bool dark) => Modules[y * Size + x] = dark;
 
         public void SetFunction(int x, int y, bool dark)
         {
-            _dark[y, x] = dark;
-            _function[y, x] = true;
+            Modules[y * Size + x] = dark;
+            Functions[y * Size + x] = true;
         }
     }
 }

@@ -12,7 +12,9 @@ namespace LifeOS.Pdf.Tests
         {
             using (var ms = new MemoryStream())
             {
-                obj.WriteTo(new PdfOutput(ms));
+                var output = new PdfOutput(ms);
+                obj.WriteTo(output);
+                output.Flush();
                 return Encoding.ASCII.GetString(ms.ToArray());
             }
         }

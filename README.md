@@ -37,8 +37,8 @@ fonts need no font files; for TrueType fonts you ship the `.ttf` with your app.
 | 3 | Reports from templates (invoice, receipt, payslip, finance report, certificate) | ✅ v0.4 |
 | 4 | QR codes & barcodes (vector, PNG, SVG), QRIS | ✅ v0.5 |
 | 5 | Links, bookmarks, table of contents, attachments, annotations | ✅ v0.6 |
-| 6 | Open existing PDFs: merge, split, watermark, compress | next |
-| 7 | Extract text, images and tables (CSV) | planned |
+| 6 | Open existing PDFs: merge, split, watermark, page numbers, n-up, compress | ✅ v0.7 |
+| 7 | Extract text, images and tables (CSV) | next |
 | 8 | Forms: create, fill, flatten | planned |
 | 9 | Encryption & digital signatures | planned |
 | 10 | Render to images, read QR/barcodes, OCR (separate packages) | planned |
@@ -224,6 +224,35 @@ Links only accept `http`, `https`, `mailto` and `tel`. In templates: `<a href="�
 `anchor="…"`, `<toc/>`, `<attachment src="data.csv"/>` and
 `<document pageMode="outlines" zoom="fitWidth">`.
 
+### Open and edit existing PDFs
+
+```csharp
+using LifeOS.Pdf.Manipulation;
+
+var doc = PdfDocument.Open("contract.pdf");          // any PDF 1.0–1.7 / 2.0 file (not encrypted)
+doc.Pages[0].Graphics.DrawText("DISETUJUI", font, 400, 60, PdfColor.Red);
+doc.Pages[2].Rotation = 90;
+doc.RemovePage(5);
+doc.Save("contract-signed.pdf");
+
+var all = PdfMerger.Merge(new[] { "invoice.pdf", "receipt.pdf" });   // a bookmark per file
+PdfStamper.AddTextWatermark(all, "SALINAN");
+PdfStamper.AddPageNumbers(all, "Halaman {page} dari {pages}");
+PdfStamper.AddBatesNumbers(all, "LIFEOS-");
+all.Save("all.pdf", new PdfSaveOptions { UseObjectStreams = true }); // smaller file
+
+var parts = PdfSplitter.SplitEvery(PdfDocument.Open("big.pdf"), 10);
+var twoUp = PdfImposition.NUp(doc, columns: 2, rows: 1);
+var booklet = PdfImposition.Booklet(doc);
+PdfImposition.Overlay(doc, PdfDocument.Open("letterhead.pdf").Pages[0]); // behind the content
+newPage.Graphics.DrawPage(doc.Pages[0], 40, 40, 250, 350);            // a page as a vector image
+```
+
+The parser handles cross-reference streams, object streams, incremental updates and damaged
+files (the cross-reference is rebuilt), and is safe on untrusted input: nesting, stream size,
+object count and page count are limited (`PdfReadOptions`), and scripts in copied
+annotations are dropped. Encrypted files are reported with `PdfEncryptedException`.
+
 ### Images → PDF
 
 ```csharp
@@ -244,6 +273,12 @@ Requires the .NET SDK 8 or newer (SDK 10 also builds the `net10.0` target).
 dotnet build -c Release
 dotnet test -c Release
 dotnet run --project samples/LifeOS.Pdf.Samples -f net8.0 -- out/net8.0
+```
+
+Benchmarks (numbers and what was optimized: [docs/performance.md](docs/performance.md)):
+
+```bash
+dotnet run -c Release --project benchmarks/LifeOS.Pdf.Benchmarks
 ```
 
 External validation (Python 3.10+, development only — not needed to use the library):

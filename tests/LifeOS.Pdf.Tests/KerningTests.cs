@@ -26,7 +26,7 @@ namespace LifeOS.Pdf.Tests
             var face = PdfFontFace.FromFile(FontPath("NotoSans-kern.ttf"));
             var run = face.Program.Map(pair, kerning: true);
 
-            Assert.Equal(expected, run.Adjustments[0]);
+            Assert.Equal(expected, run.Adjustment(0));
             Assert.Equal(face.Program.Map(pair).Width + expected, run.Width);
         }
 
@@ -35,15 +35,15 @@ namespace LifeOS.Pdf.Tests
         {
             var face = PdfFontFace.FromFile(FontPath("NotoSans-kerntable.ttf"));
 
-            Assert.Equal(-80, face.Program.Map("AV", kerning: true).Adjustments[0]);
-            Assert.Equal(-60, face.Program.Map("To", kerning: true).Adjustments[0]);
+            Assert.Equal(-80, face.Program.Map("AV", kerning: true).Adjustment(0));
+            Assert.Equal(-60, face.Program.Map("To", kerning: true).Adjustment(0));
         }
 
         [Fact]
         public void KerningOff_ByDefaultInMapAndPdfGraphics()
         {
             var face = PdfFontFace.FromFile(FontPath("NotoSans-kern.ttf"));
-            Assert.Equal(0, face.Program.Map("AV").Adjustments[0]);
+            Assert.Equal(0, face.Program.Map("AV").Adjustment(0));
 
             var doc = new PdfDocument();
             doc.AddPage().Graphics.DrawText("AVATAR", new PdfFont(face, 12), 72, 72);
@@ -81,7 +81,7 @@ namespace LifeOS.Pdf.Tests
 
             var face = PdfFontFace.FromBytes(data);
             var run = face.Program.Map("AV", kerning: true);
-            Assert.Equal(0, run.Adjustments[0]);
+            Assert.Equal(0, run.Adjustment(0));
         }
 
         [Fact]

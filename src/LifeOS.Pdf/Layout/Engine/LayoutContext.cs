@@ -47,6 +47,35 @@ namespace LifeOS.Pdf.Layout.Engine
         /// <summary>Page number of each heading from the previous layout pass.</summary>
         public Dictionary<Paragraph, int> HeadingPages { get; } = new Dictionary<Paragraph, int>();
 
+        private const int MaxCachedRuns = 50000;
+        private readonly Dictionary<(PdfFontFace Face, bool Kerning, string Text), TextRun> _runs = new Dictionary<(PdfFontFace, bool, string), TextRun>();
+
+        /// <summary>
+        /// Maps text with a cache: documents repeat the same words and spaces constantly, and a
+        /// <see cref="TextRun"/> is immutable, so it is shared (in 1/1000 em, independent of size).
+        /// </summary>
+        public TextRun Map(PdfFont font, string text, bool kerning)
+        {
+            var key = (font.Face, kerning, text);
+            if (_runs.TryGetValue(key, out var run))
+            {
+                return run;
+            }
+
+            run = font.Map(text, kerning);
+            if (_runs.Count < MaxCachedRuns)
+            {
+                _runs[key] = run;
+            }
+
+            return run;
+        }
+
+        /// <summary>Reusable lists for drawing a line (layout runs on one thread).</summary>
+        public List<TextRun> ScratchRuns { get; } = new List<TextRun>();
+
+        public List<double> ScratchExtras { get; } = new List<double>();
+
         public PdfFont Font(PdfFontFace face, double size)
         {
             var key = (face, size);

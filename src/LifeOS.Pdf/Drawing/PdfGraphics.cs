@@ -22,14 +22,136 @@ namespace LifeOS.Pdf.Drawing
         private const int MaxUserDepth = 27;
 
         private readonly PdfPage _page;
-        private readonly StringBuilder _ops = new StringBuilder();
+        private readonly StringBuilder _main = new StringBuilder();
+        private readonly StringBuilder _underlay = new StringBuilder();
+
+        // Where drawing operators go: the main content, or (inside DrawBehind) the underlay.
+        private StringBuilder _ops;
+
+        // Height of the coordinate frame for top-left → PDF conversion (the displayed height inside
+        // a display-orientation frame, otherwise the page height).
+        private double? _frameHeight;
 
         internal PdfGraphics(PdfPage page)
         {
             _page = page;
+            _ops = _main;
         }
 
-        internal string Content => _ops.ToString();
+        internal string Content => _main.ToString();
+
+        /// <summary>Drawing that goes on top of the page (for new pages: everything after the underlay).</summary>
+        internal byte[] ContentBytes() => Bytes(_main);
+
+        /// <summary>Drawing that goes behind the page's existing content (letterheads, backgrounds).</summary>
+        internal byte[] UnderlayBytes() => Bytes(_underlay);
+
+        internal int UnderlayLength => _underlay.Length;
+
+        /// <summary>Whole content of a page created here: underlay first, then the rest.</summary>
+        internal byte[] AllContentBytes()
+        {
+            if (_underlay.Length == 0)
+            {
+                return Bytes(_main);
+            }
+
+            var under = Bytes(_underlay);
+            var main = Bytes(_main);
+            var all = new byte[under.Length + main.Length];
+            Buffer.BlockCopy(under, 0, all, 0, under.Length);
+            Buffer.BlockCopy(main, 0, all, under.Length, main.Length);
+            return all;
+        }
+
+        private static byte[] Bytes(StringBuilder sb)
+        {
+            var bytes = new byte[sb.Length];
+            var chunk = new char[Math.Min(8192, Math.Max(1, sb.Length))];
+            for (var pos = 0; pos < sb.Length; pos += chunk.Length)
+            {
+                var n = Math.Min(chunk.Length, sb.Length - pos);
+                sb.CopyTo(pos, chunk, 0, n);
+                for (var i = 0; i < n; i++)
+                {
+                    bytes[pos + i] = (byte)chunk[i];
+                }
+            }
+
+            return bytes;
+        }
+
+        /// <summary>Runs <paramref name="draw"/> with its output placed behind everything else on the page.</summary>
+        internal void DrawBehind(Action draw)
+        {
+            if (!ReferenceEquals(_ops, _main))
+            {
+                draw();
+                return;
+            }
+
+            _ops = _underlay;
+            try
+            {
+                draw();
+            }
+            finally
+            {
+                _ops = _main;
+            }
+        }
+
+        /// <summary>Width of the page as it is displayed (rotation applied).</summary>
+        internal double DisplayWidth => _page.Rotation % 180 == 0 ? _page.Width : _page.Height;
+
+        internal double DisplayHeight => _page.Rotation % 180 == 0 ? _page.Height : _page.Width;
+
+        /// <summary>
+        /// Until disposed, coordinates are those of the page as displayed: (0, 0) is the top-left corner
+        /// the reader sees, even on a page with /Rotate. Used by stamps and page numbers.
+        /// </summary>
+        internal IDisposable DisplayFrame()
+        {
+            var w = _page.Width;
+            var h = _page.Height;
+            Begin();
+            // Display space (after the viewer turns the page clockwise) → page space.
+            switch (_page.Rotation)
+            {
+                case 90: W("0").W("1").W("-1").W("0").W(w).W("0").Operator("cm"); break;
+                case 180: W("-1").W("0").W("0").W("-1").W(w).W(h).Operator("cm"); break;
+                case 270: W("0").W("-1").W("1").W("0").W("0").W(h).Operator("cm"); break;
+            }
+
+            var previous = _frameHeight;
+            _frameHeight = DisplayHeight;
+            return new FrameScope(this, previous);
+        }
+
+        private sealed class FrameScope : IDisposable
+        {
+            private readonly PdfGraphics _g;
+            private readonly double? _previous;
+            private bool _done;
+
+            public FrameScope(PdfGraphics g, double? previous)
+            {
+                _g = g;
+                _previous = previous;
+            }
+
+            public void Dispose()
+            {
+                if (_done)
+                {
+                    return;
+                }
+
+                _done = true;
+                _g._frameHeight = _previous;
+                _g.End();
+            }
+        }
 
         internal PdfPage Page => _page;
 
@@ -40,7 +162,7 @@ namespace LifeOS.Pdf.Drawing
             RequireFinite(x1, y1, x2, y2);
             Begin();
             ApplyPen(pen);
-            Op(N(x1), N(Y(y1)), "m", N(x2), N(Y(y2)), "l", "S");
+            W(x1).W(Y(y1)).W("m").W(x2).W(Y(y2)).W("l").Operator("S");
             End();
         }
 
@@ -61,7 +183,7 @@ namespace LifeOS.Pdf.Drawing
             RequireBox(x, y, width, height);
             Begin();
             ApplyPaint(pen, fill);
-            Op(N(x), N(Y(y) - height), N(width), N(height), "re", PaintOperator(pen, fill));
+            W(x).W(Y(y) - height).W(width).W(height).W("re").Operator(PaintOperator(pen, fill));
             End();
         }
 
@@ -85,16 +207,16 @@ namespace LifeOS.Pdf.Drawing
 
             Begin();
             ApplyPaint(pen, fill);
-            Op(N(left + r), N(bottom), "m");
-            Op(N(right - r), N(bottom), "l");
-            Op(N(right - r + k), N(bottom), N(right), N(bottom + r - k), N(right), N(bottom + r), "c");
-            Op(N(right), N(top - r), "l");
-            Op(N(right), N(top - r + k), N(right - r + k), N(top), N(right - r), N(top), "c");
-            Op(N(left + r), N(top), "l");
-            Op(N(left + r - k), N(top), N(left), N(top - r + k), N(left), N(top - r), "c");
-            Op(N(left), N(bottom + r), "l");
-            Op(N(left), N(bottom + r - k), N(left + r - k), N(bottom), N(left + r), N(bottom), "c");
-            Op("h", PaintOperator(pen, fill));
+            W(left + r).W(bottom).Operator("m");
+            W(right - r).W(bottom).Operator("l");
+            W(right - r + k).W(bottom).W(right).W(bottom + r - k).W(right).W(bottom + r).Operator("c");
+            W(right).W(top - r).Operator("l");
+            W(right).W(top - r + k).W(right - r + k).W(top).W(right - r).W(top).Operator("c");
+            W(left + r).W(top).Operator("l");
+            W(left + r - k).W(top).W(left).W(top - r + k).W(left).W(top - r).Operator("c");
+            W(left).W(bottom + r).Operator("l");
+            W(left).W(bottom + r - k).W(left + r - k).W(bottom).W(left + r).W(bottom).Operator("c");
+            W("h").Operator(PaintOperator(pen, fill));
             End();
         }
 
@@ -111,12 +233,12 @@ namespace LifeOS.Pdf.Drawing
 
             Begin();
             ApplyPaint(pen, fill);
-            Op(N(cx + rx), N(cy), "m");
-            Op(N(cx + rx), N(cy + ky), N(cx + kx), N(cy + ry), N(cx), N(cy + ry), "c");
-            Op(N(cx - kx), N(cy + ry), N(cx - rx), N(cy + ky), N(cx - rx), N(cy), "c");
-            Op(N(cx - rx), N(cy - ky), N(cx - kx), N(cy - ry), N(cx), N(cy - ry), "c");
-            Op(N(cx + kx), N(cy - ry), N(cx + rx), N(cy - ky), N(cx + rx), N(cy), "c");
-            Op("h", PaintOperator(pen, fill));
+            W(cx + rx).W(cy).Operator("m");
+            W(cx + rx).W(cy + ky).W(cx + kx).W(cy + ry).W(cx).W(cy + ry).Operator("c");
+            W(cx - kx).W(cy + ry).W(cx - rx).W(cy + ky).W(cx - rx).W(cy).Operator("c");
+            W(cx - rx).W(cy - ky).W(cx - kx).W(cy - ry).W(cx).W(cy - ry).Operator("c");
+            W(cx + kx).W(cy - ry).W(cx + rx).W(cy - ky).W(cx + rx).W(cy).Operator("c");
+            W("h").Operator(PaintOperator(pen, fill));
             End();
         }
 
@@ -185,9 +307,85 @@ namespace LifeOS.Pdf.Drawing
             RequireBox(x, y, width, height);
             var name = _page.UseImage(image);
             Begin();
-            Op(N(width), "0", "0", N(height), N(x), N(Y(y) - height), "cm");
-            Op("/" + name, "Do");
+            W(width).W("0").W("0").W(height).W(x).W(Y(y) - height).Operator("cm");
+            W("/" + name).Operator("Do");
             End();
+        }
+
+        /// <summary>
+        /// Draws a page of an opened PDF, scaled into the box (as it is displayed: its crop box and
+        /// rotation are applied). Use it for n-up sheets, booklets and letterheads. The page's
+        /// annotations (links, notes) are not drawn. Pages that were changed or created in memory
+        /// are taken from a saved snapshot of their document.
+        /// </summary>
+        public void DrawPage(PdfPage page, double x, double y, double width, double height)
+        {
+            if (page == null)
+            {
+                throw new ArgumentNullException(nameof(page));
+            }
+
+            if (!page.IsImported)
+            {
+                // A page built in memory: save its document and use the copy of the page.
+                page = PdfDocument.Pristine(OpenedCopy(page));
+            }
+
+            RequireBox(x, y, width, height);
+            var source = PdfDocument.Pristine(page);
+            var sp = source.Source!;
+            var name = _page.UseForm(sp);
+            var box = sp.CropBox ?? sp.MediaBox;
+            double bx = box[0], by = box[1], bw = box[2] - box[0], bh = box[3] - box[1];
+            var rotation = source.Rotation;
+            var turned = rotation == 90 || rotation == 270;
+            var sx = width / (turned ? bh : bw);
+            var sy = height / (turned ? bw : bh);
+            var left = x;
+            var bottom = Y(y) - height;
+            // Map the box to the target rectangle, turning it clockwise by the page rotation.
+            double a, b, c, d, e, f;
+            switch (rotation)
+            {
+                case 90:
+                    a = 0; b = -sy; c = sx; d = 0; e = left - sx * by; f = bottom + sy * (bw + bx);
+                    break;
+                case 180:
+                    a = -sx; b = 0; c = 0; d = -sy; e = left + sx * (bw + bx); f = bottom + sy * (bh + by);
+                    break;
+                case 270:
+                    a = 0; b = sy; c = -sx; d = 0; e = left + sx * (bh + by); f = bottom - sy * bx;
+                    break;
+                default:
+                    a = sx; b = 0; c = 0; d = sy; e = left - sx * bx; f = bottom - sy * by;
+                    break;
+            }
+
+            Begin();
+            W(a).W(b).W(c).W(d).W(e).W(f).Operator("cm");
+            W("/" + name).Operator("Do");
+            End();
+        }
+
+        private static PdfPage OpenedCopy(PdfPage page)
+        {
+            var owner = page.Document;
+            var index = -1;
+            for (var i = 0; i < owner.Pages.Count; i++)
+            {
+                if (ReferenceEquals(owner.Pages[i], page))
+                {
+                    index = i;
+                    break;
+                }
+            }
+
+            if (index < 0)
+            {
+                throw new ArgumentException("The page was removed from its document.", nameof(page));
+            }
+
+            return PdfDocument.Open(owner.ToArray()).Pages[index];
         }
 
         /// <summary>Draws an image with the given width; height follows the image's aspect ratio.</summary>
@@ -248,9 +446,9 @@ namespace LifeOS.Pdf.Drawing
             var unit = size / modules;
             var background = light ?? PdfColor.White;
             Begin();
-            Op(ColorOperands(background), "rg");
-            Op(N(x), N(Y(y) - size), N(size), N(size), "re", "f");
-            Op(ColorOperands(dark ?? PdfColor.Black), "rg");
+            SetColor(background, "rg");
+            W(x).W(Y(y) - size).W(size).W(size).W("re").Operator("f");
+            SetColor(dark ?? PdfColor.Black, "rg");
             var any = false;
             for (var row = 0; row < qr.Size; row++)
             {
@@ -270,14 +468,14 @@ namespace LifeOS.Pdf.Drawing
                     }
 
                     var top = y + (row + quietZone) * unit;
-                    Op(N(x + (start + quietZone) * unit), N(Y(top) - unit), N((col - start) * unit), N(unit), "re");
+                    W(x + (start + quietZone) * unit).W(Y(top) - unit).W((col - start) * unit).W(unit).Operator("re");
                     any = true;
                 }
             }
 
             if (any)
             {
-                Op("f");
+                Operator("f");
             }
 
             End();
@@ -343,9 +541,9 @@ namespace LifeOS.Pdf.Drawing
             }
 
             Begin();
-            Op(ColorOperands(light ?? PdfColor.White), "rg");
-            Op(N(x), N(Y(y) - height), N(width), N(height), "re", "f");
-            Op(ColorOperands(dark ?? PdfColor.Black), "rg");
+            SetColor(light ?? PdfColor.White, "rg");
+            W(x).W(Y(y) - height).W(width).W(height).W("re").Operator("f");
+            SetColor(dark ?? PdfColor.Black, "rg");
             var i = 0;
             while (i < barcode.ModuleCount)
             {
@@ -361,10 +559,10 @@ namespace LifeOS.Pdf.Drawing
                     i++;
                 }
 
-                Op(N(x + (start + quiet) * unit), N(Y(y) - barHeight), N((i - start) * unit), N(barHeight), "re");
+                W(x + (start + quiet) * unit).W(Y(y) - barHeight).W((i - start) * unit).W(barHeight).Operator("re");
             }
 
-            Op("f");
+            Operator("f");
             End();
 
             if (showText)
@@ -406,7 +604,7 @@ namespace LifeOS.Pdf.Drawing
         public void Translate(double dx, double dy)
         {
             RequireFinite(dx, dy);
-            Op("1", "0", "0", "1", N(dx), N(-dy), "cm");
+            W("1").W("0").W("0").W("1").W(dx).W(-dy).Operator("cm");
         }
 
         /// <summary>Rotates everything drawn afterwards around (x, y). Positive degrees turn clockwise, as on screen.</summary>
@@ -420,7 +618,7 @@ namespace LifeOS.Pdf.Drawing
             var px = x;
             var py = Y(y);
             // Row-vector matrix for translate(-p) · rotate · translate(p).
-            Op(N(cos), N(sin), N(-sin), N(cos), N(px - px * cos + py * sin), N(py - px * sin - py * cos), "cm");
+            W(cos).W(sin).W(-sin).W(cos).W(px - px * cos + py * sin).W(py - px * sin - py * cos).Operator("cm");
         }
 
         /// <summary>Scales everything drawn afterwards around (x, y). Negative factors mirror.</summary>
@@ -434,7 +632,7 @@ namespace LifeOS.Pdf.Drawing
 
             var px = x;
             var py = Y(y);
-            Op(N(scaleX), "0", "0", N(scaleY), N(px - scaleX * px), N(py - scaleY * py), "cm");
+            W(scaleX).W("0").W("0").W(scaleY).W(px - scaleX * px).W(py - scaleY * py).Operator("cm");
         }
 
         /// <summary>Sets the opacity (0 = invisible, 1 = opaque) for fills, strokes, text and images.</summary>
@@ -446,14 +644,14 @@ namespace LifeOS.Pdf.Drawing
             RequireUnit(fill, nameof(fill));
             RequireUnit(stroke, nameof(stroke));
             var name = _page.UseOpacity(Math.Round(fill, 4), Math.Round(stroke, 4));
-            Op("/" + name, "gs");
+            W("/" + name).Operator("gs");
         }
 
         /// <summary>Limits drawing to a rectangle until the state is restored.</summary>
         public void ClipRectangle(double x, double y, double width, double height)
         {
             RequireBox(x, y, width, height);
-            Op(N(x), N(Y(y) - height), N(width), N(height), "re", "W", "n");
+            W(x).W(Y(y) - height).W(width).W(height).W("re").W("W").Operator("n");
         }
 
         internal int Depth { get; private set; }
@@ -523,12 +721,14 @@ namespace LifeOS.Pdf.Drawing
             var name = _page.UseFont(font.Face, run);
 
             Begin();
-            Op(ColorOperands(color), "rg");
-            Op("BT");
-            Op("/" + name, N(font.Size), "Tf");
-            Op("1", "0", "0", "1", N(left), N(baseline), "Tm");
-            Op("<" + PdfFormat.Hex(bytes) + ">", "Tj");
-            Op("ET");
+            SetColor(color, "rg");
+            Operator("BT");
+            _ops.Append('/').Append(name).Append(' ');
+            W(font.Size).Operator("Tf");
+            W("1 0 0 1").W(left).W(baseline).Operator("Tm");
+            _ops.Append('<');
+            PdfFormat.AppendHex(_ops, bytes, 0, bytes.Length);
+            _ops.Append("> Tj\nET\n");
             End();
         }
 
@@ -547,51 +747,53 @@ namespace LifeOS.Pdf.Drawing
 
             var name = _page.UseFont(font.Face, run);
             Begin();
-            Op(ColorOperands(color), "rg");
-            Op("BT");
-            Op("/" + name, N(font.Size), "Tf");
-            Op("1", "0", "0", "1", N(x), N(Y(baseline)), "Tm");
+            SetColor(color, "rg");
+            Operator("BT");
+            _ops.Append('/').Append(name).Append(' ');
+            W(font.Size).Operator("Tf");
+            W("1 0 0 1").W(x).W(Y(baseline)).Operator("Tm");
 
             var bpg = run.BytesPerGlyph;
             var glyphCount = run.Glyphs.Length;
-            var tj = new StringBuilder("[<");
             var any = false;
-            for (var i = 0; i < glyphCount; i++)
+            for (var i = 0; i < glyphCount - 1 && !any; i++)
             {
-                for (var b = 0; b < bpg; b++)
-                {
-                    tj.Append(run.Codes[i * bpg + b].ToString("X2", System.Globalization.CultureInfo.InvariantCulture));
-                }
-
-                var adjust = run.Adjustments[i] + (extraPoints != null ? extraPoints[i] * 1000.0 / font.Size : 0);
-                var rounded = Math.Round(adjust, 3);
-                if (rounded != 0 && i < glyphCount - 1)
-                {
-                    // TJ numbers are subtracted from the position: negative = move right.
-                    tj.Append("> ").Append(N(-rounded)).Append(" <");
-                    any = true;
-                }
+                any = Math.Round(run.Adjustment(i) + (extraPoints != null ? extraPoints[i] * 1000.0 / font.Size : 0), 3) != 0;
             }
 
-            tj.Append(">]");
-            if (any)
+            if (!any)
             {
-                Op(tj.ToString(), "TJ");
+                _ops.Append('<');
+                PdfFormat.AppendHex(_ops, run.Codes, 0, run.Codes.Length);
+                _ops.Append("> Tj\n");
             }
             else
             {
-                Op("<" + PdfFormat.Hex(run.Codes) + ">", "Tj");
+                _ops.Append("[<");
+                for (var i = 0; i < glyphCount; i++)
+                {
+                    PdfFormat.AppendHex(_ops, run.Codes, i * bpg, bpg);
+                    var adjust = run.Adjustment(i) + (extraPoints != null ? extraPoints[i] * 1000.0 / font.Size : 0);
+                    var rounded = Math.Round(adjust, 3);
+                    if (rounded != 0 && i < glyphCount - 1)
+                    {
+                        // TJ numbers are subtracted from the position: negative = move right.
+                        _ops.Append("> ");
+                        PdfFormat.AppendNumber(_ops, -rounded);
+                        _ops.Append(" <");
+                    }
+                }
+
+                _ops.Append(">] TJ\n");
             }
 
-            Op("ET");
+            Operator("ET");
             End();
         }
 
-        private double Y(double y) => _page.Height - y;
+        private double Y(double y) => (_frameHeight ?? _page.Height) - y;
 
         private static string N(double v) => PdfFormat.Number(v);
-
-        private static string ColorOperands(PdfColor c) => N(c.R / 255.0) + " " + N(c.G / 255.0) + " " + N(c.B / 255.0);
 
         private void Begin() => _ops.Append("q\n");
 
@@ -599,13 +801,48 @@ namespace LifeOS.Pdf.Drawing
 
         private void Op(params string[] parts)
         {
-            _ops.Append(string.Join(" ", parts)).Append('\n');
+            for (var i = 0; i < parts.Length; i++)
+            {
+                if (i > 0)
+                {
+                    _ops.Append(' ');
+                }
+
+                _ops.Append(parts[i]);
+            }
+
+            _ops.Append('\n');
         }
+
+        // Allocation-free writers for the hot paths: a number or word followed by a space,
+        // and an operator ending the line.
+        private PdfGraphics W(double value)
+        {
+            PdfFormat.AppendNumber(_ops, value);
+            _ops.Append(' ');
+            return this;
+        }
+
+        private PdfGraphics W(string word)
+        {
+            _ops.Append(word).Append(' ');
+            return this;
+        }
+
+        private void Operator(string op) => _ops.Append(op).Append('\n');
+
+        private void SetColor(PdfColor c, string op)
+        {
+            W(c.R / 255.0).W(c.G / 255.0).W(c.B / 255.0).Operator(op);
+        }
+
+        /// <summary>Length of the content written so far (no string is built).</summary>
+        internal int ContentLength => _main.Length + _underlay.Length;
 
         private void ApplyPen(PdfPen pen)
         {
-            Op(ColorOperands(pen.Color), "RG");
-            Op(N(pen.Width), "w");
+            SetColor(pen.Color, "RG");
+            W(pen.Width).Operator("w");
             if (pen.DashPattern != null && pen.DashPattern.Length > 0)
             {
                 var parts = new string[pen.DashPattern.Length];
@@ -627,7 +864,7 @@ namespace LifeOS.Pdf.Drawing
 
             if (fill.HasValue)
             {
-                Op(ColorOperands(fill.Value), "rg");
+                SetColor(fill.Value, "rg");
             }
         }
 

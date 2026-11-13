@@ -3,6 +3,36 @@
 Format: [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 Before v1.0, a minor version may contain breaking changes (always listed here).
 
+## [0.7.0] — Phase 6: Open & edit existing PDFs, performance
+
+### Added
+- `PdfDocument.Open(path | Stream | byte[], PdfReadOptions)`: parser for classic and
+  cross-reference-stream files, object streams, incremental updates, linearized files and
+  damaged files (cross-reference rebuilt); Flate/LZW (with predictors), ASCII85, ASCIIHex and
+  RunLength decoding. Info, page sizes, rotation and bookmarks are read; `PdfVersion`.
+- Page operations: `ImportPage(s)`, `InsertImportedPage`, `InsertPage`, `RemovePage`, `MovePage`,
+  `PdfPage.Rotation`, `PdfPage.IsImported`; drawing, links and annotations on opened pages.
+- `PdfGraphics.DrawPage`: any page as a vector form XObject (n-up, letterheads).
+- `LifeOS.Pdf.Manipulation`: `PdfMerger` (bookmark per document), `PdfSplitter` (every N pages,
+  ranges, extract), `PdfStamper` (text/image watermark, page numbers, Bates numbers — placed by
+  displayed orientation), `PdfImposition` (n-up, booklet, overlay/letterhead behind content).
+- `PageRange` (`"1-3,5,8-"`, `"last"`, descending ranges).
+- `PdfSaveOptions.UseObjectStreams` (object streams + cross-reference stream, smaller files).
+- Safety for untrusted input: `PdfReadOptions` limits (nesting depth, decompressed stream size,
+  object count, pages), cycle-safe page/outline/name trees, `/Prev` loop detection;
+  `PdfReadException`, `PdfEncryptedException`. JavaScript, launch and form-submit actions and
+  `/AA` are not copied from source pages.
+
+### Performance
+- 2–5× faster generation with 3–7× fewer allocations across graphics, TrueType text, the layout
+  engine, templates and QR codes; output bytes are unchanged. Details and numbers in
+  [docs/performance.md](docs/performance.md).
+- Layout no longer runs a second pass when only headers/footers show the page count.
+
+### Added (tooling)
+- `PdfSaveOptions.CompressionLevel` (`Optimal` by default, `Fastest` for quicker saves).
+- `benchmarks/LifeOS.Pdf.Benchmarks`: repeatable timings per phase.
+
 ## [0.6.0] — Phase 5: Navigation & interactive features
 
 ### Added

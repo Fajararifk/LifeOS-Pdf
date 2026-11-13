@@ -9,6 +9,7 @@ using LifeOS.Pdf.Fonts.Embedding;
 using LifeOS.Pdf.Fonts.Standard;
 using LifeOS.Pdf.Fonts.TrueType;
 using LifeOS.Pdf.Objects;
+using LifeOS.Pdf.Parsing;
 
 namespace LifeOS.Pdf.Internal
 {
@@ -99,63 +100,63 @@ namespace LifeOS.Pdf.Internal
 
             var kids = new PdfArray();
             var pageObjects = new Dictionary<PdfPage, PdfIndirectObject>();
+            PdfIndirectObject PageObject(PdfPage p)
+            {
+                // Allocated on first use: links and copied annotations may point to later pages.
+                if (!pageObjects.TryGetValue(p, out var o))
+                {
+                    o = New();
+                    pageObjects[p] = o;
+                }
+
+                return o;
+            }
+
+            // Source page (file, object number) → the page that represents it in this document.
+            var sourcePages = new Dictionary<(PdfParser, int), PdfPage>();
             foreach (var page in document.Pages)
             {
-                var pageObj = New();
+                if (page.Source != null && page.Source.Number > 0 && !sourcePages.ContainsKey((page.Source.Parser, page.Source.Number)))
+                {
+                    sourcePages[(page.Source.Parser, page.Source.Number)] = page;
+                }
+            }
+
+            var copier = new ObjectCopier(New, (parser, number) => sourcePages.TryGetValue((parser, number), out var p) ? PageObject(p) : null, options.CompressContent, options.CompressionLevel);
+            var formObjects = new Dictionary<SourcePage, PdfIndirectObject>();
+            foreach (var form in document.Resources.Forms)
+            {
+                formObjects[form] = ImportedPageWriter.WriteForm(form, New, copier, options);
+            }
+
+            copier.Drain();
+            var resourceObjects = new PageResourceObjects(fontObjects, imageObjects, stateObjects, formObjects);
+            var imported = new ImportedPageWriter(New, copier, sourcePages, pageObjects, options);
+            foreach (var page in document.Pages)
+            {
+                var pageObj = PageObject(page);
+                kids.Items.Add(pageObj.Reference);
+                if (page.Source != null)
+                {
+                    pageObj.Value = imported.Write(page, pagesRoot, resourceObjects);
+                    copier.Drain();
+                    continue;
+                }
+
                 var contentObj = New();
-
-                var content = Encoding.ASCII.GetBytes(page.Graphics.Content);
-                var contentDict = new PdfDictionary();
-                if (options.CompressContent && content.Length > 0)
-                {
-                    content = Zlib.Compress(content);
-                    contentDict.Set("Filter", "FlateDecode");
-                }
-
-                contentObj.Value = new PdfStream(contentDict, content);
-
-                var resources = new PdfDictionary();
-                if (page.Fonts.Count > 0)
-                {
-                    var fonts = new PdfDictionary();
-                    foreach (var entry in page.Fonts)
-                    {
-                        fonts.Set(entry.Key, fontObjects[entry.Value].Reference);
-                    }
-
-                    resources.Set("Font", fonts);
-                }
-
-                if (page.Images.Count > 0)
-                {
-                    var xobjects = new PdfDictionary();
-                    foreach (var entry in page.Images)
-                    {
-                        xobjects.Set(entry.Key, imageObjects[entry.Value].Reference);
-                    }
-
-                    resources.Set("XObject", xobjects);
-                }
-
-                if (page.GraphicsStates.Count > 0)
-                {
-                    var states = new PdfDictionary();
-                    foreach (var name in page.GraphicsStates)
-                    {
-                        states.Set(name, stateObjects[name].Reference);
-                    }
-
-                    resources.Set("ExtGState", states);
-                }
-
-                pageObj.Value = new PdfDictionary()
+                contentObj.Value = ContentStream(page.Graphics.AllContentBytes(), options);
+                var dict = new PdfDictionary()
                     .Set("Type", "Page")
                     .Set("Parent", pagesRoot.Reference)
                     .Set("MediaBox", PdfArray.OfNumbers(0, 0, page.Width, page.Height))
-                    .Set("Resources", resources)
+                    .Set("Resources", resourceObjects.For(page))
                     .Set("Contents", contentObj.Reference);
-                kids.Items.Add(pageObj.Reference);
-                pageObjects[page] = pageObj;
+                if (page.Rotation != 0)
+                {
+                    dict.Set("Rotate", page.Rotation);
+                }
+
+                pageObj.Value = dict;
             }
 
             // Interactive features come after the pages so destinations can point to any page.
@@ -165,7 +166,15 @@ namespace LifeOS.Pdf.Internal
                 var annots = interactive.Annotations(page);
                 if (annots != null)
                 {
-                    ((PdfDictionary)pageObjects[page].Value!).Set("Annots", annots);
+                    var pageDict = (PdfDictionary)pageObjects[page].Value!;
+                    if (pageDict.Get("Annots") is PdfArray existing)
+                    {
+                        existing.Items.AddRange(annots.Items);
+                    }
+                    else
+                    {
+                        pageDict.Set("Annots", annots);
+                    }
                 }
             }
 
@@ -184,7 +193,19 @@ namespace LifeOS.Pdf.Internal
             var info = New();
             info.Value = BuildInfo(document.Info);
 
-            return Serialize(objects, catalog, info);
+            return options.UseObjectStreams ? CompactSerializer.Serialize(objects, catalog, info, Header) : Serialize(objects, catalog, info);
+        }
+
+        internal static PdfStream ContentStream(byte[] content, PdfSaveOptions options)
+        {
+            var dict = new PdfDictionary();
+            if (options.CompressContent && content.Length > 0)
+            {
+                content = Zlib.Compress(content, options.CompressionLevel);
+                dict.Set("Filter", "FlateDecode");
+            }
+
+            return new PdfStream(dict, content);
         }
 
         private static PdfDictionary BuildInfo(PdfDocumentInfo info)
@@ -230,7 +251,8 @@ namespace LifeOS.Pdf.Internal
                     }
 
                     offsets[i] = output.Position;
-                    output.Write(obj.Number.ToString(CultureInfo.InvariantCulture) + " 0 obj\n");
+                    output.WriteInteger(obj.Number);
+                    output.Write(" 0 obj\n");
                     obj.Value.WriteTo(output);
                     output.Write("\nendobj\n");
                 }
@@ -251,7 +273,8 @@ namespace LifeOS.Pdf.Internal
                 byte[] id;
                 using (var md5 = MD5.Create())
                 {
-                    id = md5.ComputeHash(ms.ToArray());
+                    output.Flush();
+                    id = md5.ComputeHash(ms.GetBuffer(), 0, (int)ms.Length);
                 }
 
                 var trailer = new PdfDictionary()
@@ -263,6 +286,7 @@ namespace LifeOS.Pdf.Internal
                 output.Write("trailer\n");
                 trailer.WriteTo(output);
                 output.Write("\nstartxref\n" + xrefOffset.ToString(CultureInfo.InvariantCulture) + "\n%%EOF\n");
+                output.Flush();
                 return ms.ToArray();
             }
         }

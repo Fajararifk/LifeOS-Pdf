@@ -163,7 +163,7 @@ namespace LifeOS.Pdf.Layout.Engine
 
         public override void ContentWidth(LayoutContext ctx, out double min, out double max)
         {
-            var atoms = BuildAtoms(ctx);
+            var atoms = Atoms(ctx);
             min = 0;
             max = 0;
             double lineWidth = 0;
@@ -204,8 +204,10 @@ namespace LifeOS.Pdf.Layout.Engine
         private List<TextLine> Lines(LayoutContext ctx, double width)
         {
             // Page-number fields make the text depend on the page, so the page is part of the key.
-            var key = width + "|" + ctx.PageNumber + "|" + ctx.PageCount;
-            if (_cache.Key == key && _cache.Lines != null)
+            var fields = _cache.HasFields ?? (_cache.HasFields = HasFields()).Value;
+            var page = fields ? ctx.PageNumber : 0;
+            var count = fields ? ctx.PageCount : 0;
+            if (_cache.Lines != null && _cache.Width == width && _cache.Page == page && _cache.Count == count)
             {
                 return _cache.Lines;
             }
@@ -213,15 +215,33 @@ namespace LifeOS.Pdf.Layout.Engine
             var format = _paragraph.Format;
             var limit = Math.Max(1, width - _leftIndent - format.RightIndent);
             var firstLimit = Math.Max(1, limit - format.FirstLineIndent);
-            var lines = LineBreaker.Break(BuildAtoms(ctx), firstLimit, limit, ctx);
+            var lines = LineBreaker.Break(Atoms(ctx), firstLimit, limit, ctx);
             foreach (var line in lines)
             {
                 Measure(line, format.LineSpacing);
             }
 
-            _cache.Key = key;
+            _cache.Width = width;
+            _cache.Page = page;
+            _cache.Count = count;
             _cache.Lines = lines;
             return lines;
+        }
+
+        /// <summary>Atoms are independent of the width: built once (per page for paragraphs with fields).</summary>
+        private List<Atom> Atoms(LayoutContext ctx)
+        {
+            var fields = _cache.HasFields ?? (_cache.HasFields = HasFields()).Value;
+            var page = fields ? ctx.PageNumber : 0;
+            var count = fields ? ctx.PageCount : 0;
+            if (_cache.Atoms == null || _cache.AtomsPage != page || _cache.AtomsCount != count)
+            {
+                _cache.Atoms = BuildAtoms(ctx);
+                _cache.AtomsPage = page;
+                _cache.AtomsCount = count;
+            }
+
+            return _cache.Atoms;
         }
 
         private List<Atom> BuildAtoms(LayoutContext ctx)
@@ -319,16 +339,21 @@ namespace LifeOS.Pdf.Layout.Engine
             {
                 var start = i;
                 var piece = line.Pieces[i];
-                var runs = new List<TextRun>();
-                var extras = new List<double>();
+                var runs = ctx.ScratchRuns;
+                var extras = ctx.ScratchExtras;
+                runs.Clear();
+                extras.Clear();
                 double segmentWidth = 0;
                 while (i < line.Pieces.Count && SameAppearance(line.Pieces[i], piece))
                 {
                     var p = line.Pieces[i];
                     runs.Add(p.Run);
-                    for (var g = 0; g < p.Run.Glyphs.Length; g++)
+                    if (extraPerSpace > 0)
                     {
-                        extras.Add(p.IsSpace ? extraPerSpace : 0);
+                        for (var g = 0; g < p.Run.Glyphs.Length; g++)
+                        {
+                            extras.Add(p.IsSpace ? extraPerSpace : 0);
+                        }
                     }
 
                     segmentWidth += p.Width + (p.IsSpace ? extraPerSpace * p.Run.Glyphs.Length : 0);
@@ -386,26 +411,70 @@ namespace LifeOS.Pdf.Layout.Engine
                 return runs[0];
             }
 
-            var codes = new List<byte>();
-            var glyphs = new List<int>();
-            var cps = new List<int>();
-            var adjustments = new List<double>();
-            double width = 0;
+            int codeCount = 0, glyphCount = 0;
+            var kerned = false;
             foreach (var r in runs)
             {
-                codes.AddRange(r.Codes);
-                glyphs.AddRange(r.Glyphs);
-                cps.AddRange(r.CodePoints);
-                adjustments.AddRange(r.Adjustments);
+                codeCount += r.Codes.Length;
+                glyphCount += r.Glyphs.Length;
+                kerned |= r.HasAdjustments;
+            }
+
+            var codes = new byte[codeCount];
+            var glyphs = new int[glyphCount];
+            var cps = new int[glyphCount];
+            var adjustments = kerned ? new double[glyphCount] : null;
+            double width = 0;
+            int c = 0, g = 0;
+            foreach (var r in runs)
+            {
+                Buffer.BlockCopy(r.Codes, 0, codes, c, r.Codes.Length);
+                Array.Copy(r.Glyphs, 0, glyphs, g, r.Glyphs.Length);
+                Array.Copy(r.CodePoints, 0, cps, g, r.CodePoints.Length);
+                if (adjustments != null)
+                {
+                    for (var i = 0; i < r.Glyphs.Length; i++)
+                    {
+                        adjustments[g + i] = r.Adjustment(i);
+                    }
+                }
+
+                c += r.Codes.Length;
+                g += r.Glyphs.Length;
                 width += r.Width;
             }
 
-            return new TextRun(codes.ToArray(), glyphs.ToArray(), cps.ToArray(), width, adjustments.ToArray());
+            return new TextRun(codes, glyphs, cps, width, adjustments);
+        }
+
+        private bool HasFields()
+        {
+            foreach (var inline in _paragraph.Inlines)
+            {
+                if (inline.Kind == InlineKind.PageNumber || inline.Kind == InlineKind.PageCount)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private sealed class LineCache
         {
-            public string? Key { get; set; }
+            public bool? HasFields { get; set; }
+
+            public List<Atom>? Atoms { get; set; }
+
+            public int AtomsPage { get; set; }
+
+            public int AtomsCount { get; set; }
+
+            public double Width { get; set; }
+
+            public int Page { get; set; }
+
+            public int Count { get; set; }
 
             public List<TextLine>? Lines { get; set; }
         }

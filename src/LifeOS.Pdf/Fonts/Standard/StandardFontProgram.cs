@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace LifeOS.Pdf.Fonts.Standard
@@ -71,9 +72,10 @@ namespace LifeOS.Pdf.Fonts.Standard
         public TextRun Map(string text, bool kerning = false)
         {
             var codePoints = CodePointReader.Read(text);
-            var codes = new List<byte>(codePoints.Count);
-            var glyphs = new List<int>(codePoints.Count);
-            var mapped = new List<int>(codePoints.Count);
+            var codes = new byte[codePoints.Count];
+            var glyphs = new int[codePoints.Count];
+            var mapped = new int[codePoints.Count];
+            var n = 0;
             double width = 0;
             foreach (var cp in codePoints)
             {
@@ -87,13 +89,21 @@ namespace LifeOS.Pdf.Fonts.Standard
                     code = WinAnsiEncoding.Replacement;
                 }
 
-                codes.Add(code);
-                glyphs.Add(code);
-                mapped.Add(cp);
+                codes[n] = code;
+                glyphs[n] = code;
+                mapped[n] = cp;
+                n++;
                 width += _data.GetWidth(code);
             }
 
-            return new TextRun(codes.ToArray(), glyphs.ToArray(), mapped.ToArray(), width);
+            if (n < codes.Length)
+            {
+                Array.Resize(ref codes, n);
+                Array.Resize(ref glyphs, n);
+                Array.Resize(ref mapped, n);
+            }
+
+            return new TextRun(codes, glyphs, mapped, width);
         }
 
         private bool TryEncode(int codePoint, out byte code)

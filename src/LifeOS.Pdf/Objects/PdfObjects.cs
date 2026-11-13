@@ -6,8 +6,9 @@ using LifeOS.Pdf.Internal;
 
 namespace LifeOS.Pdf.Objects
 {
-    // Minimal COS object model (ISO 32000-1 §7.3). Internal for now; it will be
-    // made public once the parser (Fase 6) needs to expose it.
+    // COS object model (ISO 32000-1 §7.3), shared by the writer and the parser.
+    // Parsed objects keep their original spelling where it matters for round trips
+    // (real numbers, name bytes) so copying a page does not change its content.
 
     internal abstract class PdfObject
     {
@@ -30,22 +31,74 @@ namespace LifeOS.Pdf.Objects
 
         public string Value { get; }
 
-        internal override void WriteTo(PdfOutput output)
+        internal override void WriteTo(PdfOutput output) => Write(output, Value);
+
+        /// <summary>Writes "/name" with #xx escapes (§7.3.5) straight to the output.</summary>
+        internal static void Write(PdfOutput output, string value)
         {
-            var sb = new StringBuilder("/");
-            foreach (var b in Encoding.UTF8.GetBytes(Value))
+            output.WriteByte((byte)'/');
+            foreach (var c in value)
             {
-                if (b < 0x21 || b > 0x7E || Delimiters.IndexOf((char)b) >= 0)
+                if (c > 0xFF)
                 {
-                    sb.Append('#').Append(b.ToString("X2", CultureInfo.InvariantCulture));
-                }
-                else
-                {
-                    sb.Append((char)b);
+                    // Not representable as single bytes: the whole name is UTF-8.
+                    foreach (var b in Bytes(value))
+                    {
+                        WriteByte(output, b);
+                    }
+
+                    return;
                 }
             }
 
-            output.Write(sb.ToString());
+            foreach (var c in value)
+            {
+                WriteByte(output, (byte)c);
+            }
+        }
+
+        private static void WriteByte(PdfOutput output, byte b)
+        {
+            if (b < 0x21 || b > 0x7E || Delimiters.IndexOf((char)b) >= 0)
+            {
+                output.WriteByte((byte)'#');
+                output.WriteByte((byte)"0123456789ABCDEF"[b >> 4]);
+                output.WriteByte((byte)"0123456789ABCDEF"[b & 15]);
+            }
+            else
+            {
+                output.WriteByte(b);
+            }
+        }
+
+        /// <summary>
+        /// Characters up to U+00FF are single bytes (so names read from a file, kept as Latin-1,
+        /// are written back unchanged); anything above is UTF-8 (§7.3.5 recommends UTF-8).
+        /// </summary>
+        private static byte[] Bytes(string value)
+        {
+            var latin = true;
+            foreach (var c in value)
+            {
+                if (c > 0xFF)
+                {
+                    latin = false;
+                    break;
+                }
+            }
+
+            if (!latin)
+            {
+                return Encoding.UTF8.GetBytes(value);
+            }
+
+            var bytes = new byte[value.Length];
+            for (var i = 0; i < value.Length; i++)
+            {
+                bytes[i] = (byte)value[i];
+            }
+
+            return bytes;
         }
     }
 
@@ -55,17 +108,35 @@ namespace LifeOS.Pdf.Objects
 
         public long Value { get; }
 
-        internal override void WriteTo(PdfOutput output) =>
-            output.Write(Value.ToString(CultureInfo.InvariantCulture));
+        internal override void WriteTo(PdfOutput output) => output.WriteInteger(Value);
     }
 
     internal sealed class PdfReal : PdfObject
     {
         public PdfReal(double value) => Value = value;
 
+        /// <summary>A number read from a file: written back exactly as it was spelled.</summary>
+        public PdfReal(double value, string spelling)
+        {
+            Value = value;
+            Spelling = spelling;
+        }
+
         public double Value { get; }
 
-        internal override void WriteTo(PdfOutput output) => output.Write(PdfFormat.Number(Value));
+        public string? Spelling { get; }
+
+        internal override void WriteTo(PdfOutput output)
+        {
+            if (Spelling != null)
+            {
+                output.Write(Spelling);
+            }
+            else
+            {
+                output.WriteNumber(Value);
+            }
+        }
     }
 
     internal sealed class PdfNull : PdfObject
@@ -105,6 +176,8 @@ namespace LifeOS.Pdf.Objects
 
         public static PdfString Hex(byte[] bytes) => new PdfString(bytes, true);
 
+        public static PdfString FromBytes(byte[] bytes, bool hex) => new PdfString(bytes, hex);
+
         /// <summary>
         /// A PDF "text string" (§7.9.2.2): plain ASCII stays a literal string,
         /// anything else becomes UTF-16BE with BOM so viewers show it correctly.
@@ -142,32 +215,29 @@ namespace LifeOS.Pdf.Objects
                 return;
             }
 
-            var sb = new StringBuilder("(");
+            output.WriteByte((byte)'(');
             foreach (var b in Bytes)
             {
-                switch (b)
+                if (b == '(' || b == ')' || b == '\\')
                 {
-                    case (byte)'(':
-                    case (byte)')':
-                    case (byte)'\\':
-                        sb.Append('\\').Append((char)b);
-                        break;
-                    default:
-                        if (b < 0x20 || b > 0x7E)
-                        {
-                            sb.Append('\\').Append(Convert.ToString(b, 8).PadLeft(3, '0'));
-                        }
-                        else
-                        {
-                            sb.Append((char)b);
-                        }
-
-                        break;
+                    output.WriteByte((byte)'\\');
+                    output.WriteByte(b);
+                }
+                else if (b < 0x20 || b > 0x7E)
+                {
+                    // Three-digit octal escape (7.3.4.2).
+                    output.WriteByte((byte)'\\');
+                    output.WriteByte((byte)('0' + (b >> 6)));
+                    output.WriteByte((byte)('0' + ((b >> 3) & 7)));
+                    output.WriteByte((byte)('0' + (b & 7)));
+                }
+                else
+                {
+                    output.WriteByte(b);
                 }
             }
 
-            sb.Append(')');
-            output.Write(sb.ToString());
+            output.WriteByte((byte)')');
         }
     }
 
@@ -231,6 +301,22 @@ namespace LifeOS.Pdf.Objects
 
         public PdfDictionary Set(string key, long value) => Set(key, new PdfInteger(value));
 
+        public IReadOnlyList<KeyValuePair<string, PdfObject>> Entries => _entries;
+
+        public bool Remove(string key)
+        {
+            for (var i = 0; i < _entries.Count; i++)
+            {
+                if (_entries[i].Key == key)
+                {
+                    _entries.RemoveAt(i);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public PdfObject? Get(string key)
         {
             foreach (var e in _entries)
@@ -249,9 +335,9 @@ namespace LifeOS.Pdf.Objects
             output.Write("<<");
             foreach (var e in _entries)
             {
-                output.Write(" ");
-                new PdfName(e.Key).WriteTo(output);
-                output.Write(" ");
+                output.WriteByte((byte)' ');
+                PdfName.Write(output, e.Key);
+                output.WriteByte((byte)' ');
                 e.Value.WriteTo(output);
             }
 
@@ -293,13 +379,39 @@ namespace LifeOS.Pdf.Objects
         public PdfReference Reference => new PdfReference(this);
     }
 
+    /// <summary>
+    /// A reference inside a parsed file ("12 0 R"), resolved lazily through its parser.
+    /// It is never written directly: pages are copied into the output first.
+    /// </summary>
+    internal sealed class PdfSourceReference : PdfObject
+    {
+        public PdfSourceReference(Parsing.PdfParser parser, int number, int generation)
+        {
+            Parser = parser;
+            Number = number;
+            Generation = generation;
+        }
+
+        public Parsing.PdfParser Parser { get; }
+
+        public int Number { get; }
+
+        public int Generation { get; }
+
+        internal override void WriteTo(PdfOutput output) =>
+            throw new InvalidOperationException("Internal error: a reference into a source file was not copied.");
+    }
+
     internal sealed class PdfReference : PdfObject
     {
         public PdfReference(PdfIndirectObject target) => Target = target;
 
         public PdfIndirectObject Target { get; }
 
-        internal override void WriteTo(PdfOutput output) =>
-            output.Write(Target.Number.ToString(CultureInfo.InvariantCulture) + " 0 R");
+        internal override void WriteTo(PdfOutput output)
+        {
+            output.WriteInteger(Target.Number);
+            output.Write(" 0 R");
+        }
     }
 }

@@ -72,3 +72,7 @@ dotnet run --project samples/LifeOS.Pdf.Samples -f net8.0 -- out/net8.0
 python tools/validate_pdf.py out/*/showcase.pdf --render-dir out/png
 ```
 lalu buka `out/net8.0/showcase.pdf` di Chrome dan satu PDF reader lain.
+
+Performa (`docs/performance.md`): perubahan untuk kecepatan **tidak boleh mengubah byte output**.
+Jalankan `dotnet run -c Release --project benchmarks/LifeOS.Pdf.Benchmarks` sebelum/sesudah dan
+bandingkan hash dokumen dengan rilis sebelumnya.

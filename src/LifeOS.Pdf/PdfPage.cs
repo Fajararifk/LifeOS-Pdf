@@ -14,12 +14,56 @@ namespace LifeOS.Pdf
     {
         private readonly PdfDocument _document;
 
-        internal PdfPage(PdfDocument document, PageSize size)
+        private int _rotation;
+
+        internal PdfPage(PdfDocument document, PageSize size, Parsing.SourcePage? source = null)
         {
             _document = document;
             Size = size;
+            Source = source;
             Graphics = new PdfGraphics(this);
+            if (source != null)
+            {
+                _rotation = source.Rotate;
+                OriginX = source.MediaBox[0];
+                OriginY = source.MediaBox[1];
+            }
         }
+
+        /// <summary>
+        /// Clockwise rotation when the page is displayed: 0, 90, 180 or 270 (other multiples of 90 are
+        /// normalized). Drawing coordinates are always those of the unrotated page.
+        /// </summary>
+        public int Rotation
+        {
+            get => _rotation;
+            set
+            {
+                if (value % 90 != 0)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "Rotation must be a multiple of 90 degrees.");
+                }
+
+                _rotation = ((value % 360) + 360) % 360;
+            }
+        }
+
+        /// <summary>True when the page comes from an opened PDF (its original content is kept).</summary>
+        public bool IsImported => Source != null;
+
+        /// <summary>The page this one was read from, or null for a page created here.</summary>
+        internal Parsing.SourcePage? Source { get; }
+
+        /// <summary>Lower-left corner of the media box (non-zero only for some imported pages).</summary>
+        internal double OriginX { get; }
+
+        internal double OriginY { get; }
+
+        /// <summary>An imported page with nothing added: it can be copied or drawn as it is in the file.</summary>
+        internal bool IsPristine => Source != null && Graphics.ContentLength == 0 && Annotations.Count == 0;
+
+        /// <summary>True when something was drawn on the page through <see cref="Graphics"/>.</summary>
+        internal bool HasNewContent => Graphics.ContentLength > 0;
 
         public PageSize Size { get; }
 
@@ -104,6 +148,16 @@ namespace LifeOS.Pdf
         {
             var name = _document.Resources.FontName(face, run);
             Fonts[name] = face;
+            return name;
+        }
+
+        /// <summary>Resource name → imported page drawn as a form XObject.</summary>
+        internal SortedDictionary<string, Parsing.SourcePage> Forms { get; } = new SortedDictionary<string, Parsing.SourcePage>(StringComparer.Ordinal);
+
+        internal string UseForm(Parsing.SourcePage page)
+        {
+            var name = _document.Resources.FormName(page);
+            Forms[name] = page;
             return name;
         }
 

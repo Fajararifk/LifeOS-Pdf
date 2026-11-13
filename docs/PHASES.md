@@ -78,7 +78,7 @@ parser (merge, ekstrak, form) menyusul, lalu integrasi engine eksternal di akhir
 | Laporan dari template | – | pdfHTML | ✓ | Fase 3 ✅ |
 | QR & barcode (buat) | – | ✓ | ✓ | Fase 4 ✅ |
 | Link, bookmark, lampiran | ✓ | ✓ | ✓ | Fase 5 ✅ |
-| Buka/merge/split/watermark/kompres | ✓ | ✓ | ✓ | Fase 6 |
+| Buka/merge/split/watermark/kompres | ✓ | ✓ | ✓ | Fase 6 ✅ |
 | Ekstrak teks/gambar/tabel, redaksi | – | ✓ | ✓ | Fase 7 |
 | Form (AcroForm) | sebagian | ✓ | ✓ | Fase 8 |
 | Enkripsi & tanda tangan digital | sebagian | ✓ | ✓ | Fase 9 |
@@ -152,7 +152,9 @@ SPESIFIKASI:
 - Viewer preferences: open mode, page layout, zoom awal.
 - Lampiran file (embedded files) dan anotasi (note, highlight, stamp).
 
-## FASE 6 — Parser & Manipulasi (v0.7)  · use case 3, 4
+## FASE 6 — Parser & Manipulasi ✅ (v0.7)  · use case 3, 4
+Selesai (parser + recovery, merge/split/extract/rotate/reorder/hapus, watermark, nomor halaman,
+Bates, n-up, booklet, kop surat, object stream). Downscale gambar → Fase 10 (butuh decoder JPEG).
 SPESIFIKASI:
 - Lexer + parser COS, xref tabel & xref stream, object stream, incremental
   update, rebuild xref rusak. Aturan input tidak terpercaya (CLAUDE.md #7).

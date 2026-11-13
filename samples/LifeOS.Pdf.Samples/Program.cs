@@ -69,6 +69,9 @@ namespace LifeOS.Pdf.Samples
 
             // Navigation & interactive features (Fase 5).
             NavigationSample.Run(outputDir);
+
+            // Opening and editing existing PDFs (Fase 6).
+            ManipulationSample.Run(outputDir);
             return 0;
         }
 

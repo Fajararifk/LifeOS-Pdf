@@ -56,7 +56,7 @@ namespace LifeOS.Pdf.Fonts
             Glyphs = glyphs;
             CodePoints = codePoints;
             Width = width;
-            Adjustments = adjustments ?? new double[glyphs.Length];
+            _adjustments = adjustments;
             BytesPerGlyph = glyphs.Length == 0 ? 1 : codes.Length / glyphs.Length;
         }
 
@@ -69,13 +69,21 @@ namespace LifeOS.Pdf.Fonts
         /// Extra advance after each glyph in 1/1000 em (kerning; positive = wider), already
         /// included in <see cref="Width"/>. Written with the TJ operator.
         /// </summary>
-        public double[] Adjustments { get; }
+        private readonly double[]? _adjustments;
+
+        /// <summary>Kerning after glyph <paramref name="index"/> (0 when the run has none).</summary>
+        public double Adjustment(int index) => _adjustments == null ? 0 : _adjustments[index];
 
         public bool HasAdjustments
         {
             get
             {
-                foreach (var a in Adjustments)
+                if (_adjustments == null)
+                {
+                    return false;
+                }
+
+                foreach (var a in _adjustments)
                 {
                     if (a != 0)
                     {

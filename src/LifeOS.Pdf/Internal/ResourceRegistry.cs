@@ -59,6 +59,23 @@ namespace LifeOS.Pdf.Internal
             return name;
         }
 
+        /// <summary>Pages of opened files drawn as form XObjects, in first-use order.</summary>
+        public List<Parsing.SourcePage> Forms { get; } = new List<Parsing.SourcePage>();
+
+        private readonly Dictionary<Parsing.SourcePage, string> _formNames = new Dictionary<Parsing.SourcePage, string>();
+
+        public string FormName(Parsing.SourcePage page)
+        {
+            if (!_formNames.TryGetValue(page, out var name))
+            {
+                Forms.Add(page);
+                name = "Fm" + Forms.Count.ToString(CultureInfo.InvariantCulture);
+                _formNames[page] = name;
+            }
+
+            return name;
+        }
+
         public string GraphicsStateName(OpacityState state)
         {
             var key = PdfFormat.Number(state.Fill) + "/" + PdfFormat.Number(state.Stroke);

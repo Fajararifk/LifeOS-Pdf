@@ -26,9 +26,13 @@ namespace LifeOS.Pdf.Layout.Engine
             var ctx = new LayoutContext(_doc.Styles);
             var hasToc = CollectHeadings(ctx);
             var pages = Paginator.Paginate(_doc, ctx);
+            // The body only changes with the page count if it shows the count itself; headers and
+            // footers are measured with placeholder numbers. Skipping the extra pass halves the
+            // work for the usual "page X of Y" footer.
+            var countMatters = UsesPageCount();
             for (var pass = 1; pass < MaxPasses; pass++)
             {
-                var changed = pages.Count != ctx.PageCount;
+                var changed = countMatters && pages.Count != ctx.PageCount;
                 ctx.PageCount = pages.Count;
                 if (hasToc)
                 {
@@ -126,6 +130,61 @@ namespace LifeOS.Pdf.Layout.Engine
                     }
                 }
             }
+        }
+
+        private bool UsesPageCount()
+        {
+            var stack = new Stack<Block>();
+            foreach (var section in _doc.Sections)
+            {
+                foreach (var block in section.BlockList)
+                {
+                    stack.Push(block);
+                }
+            }
+
+            while (stack.Count > 0)
+            {
+                switch (stack.Pop())
+                {
+                    case Paragraph p:
+                        foreach (var inline in p.Inlines)
+                        {
+                            if (inline.Kind == InlineKind.PageCount)
+                            {
+                                return true;
+                            }
+                        }
+
+                        break;
+                    case Table table:
+                        foreach (var row in table.Rows)
+                        {
+                            foreach (var cell in row.Cells)
+                            {
+                                foreach (var b in cell.BlockList)
+                                {
+                                    stack.Push(b);
+                                }
+                            }
+                        }
+
+                        break;
+                    case ListBlock list:
+                        foreach (var item in list.Items)
+                        {
+                            stack.Push(item.Paragraph);
+                            foreach (var child in item.Children)
+                            {
+                                stack.Push(child);
+                            }
+                        }
+
+                        break;
+                }
+            }
+
+            return false;
         }
 
         private static void DrawAll(List<DrawItem> items, Drawing.PdfGraphics g)

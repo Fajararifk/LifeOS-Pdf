@@ -58,12 +58,12 @@ namespace LifeOS.Pdf.Internal
                     break;
                 case DestinationView.FitWidth:
                     array.Items.Add(new PdfName("FitH"));
-                    array.Items.Add(Coordinate(destination.Top.HasValue ? page.Height - destination.Top.Value : (double?)null));
+                    array.Items.Add(Coordinate(destination.Top.HasValue ? page.OriginY + page.Height - destination.Top.Value : (double?)null));
                     break;
                 default:
                     array.Items.Add(new PdfName("XYZ"));
-                    array.Items.Add(Coordinate(destination.Left));
-                    array.Items.Add(Coordinate(destination.Top.HasValue ? page.Height - destination.Top.Value : (double?)null));
+                    array.Items.Add(Coordinate(destination.Left.HasValue ? page.OriginX + destination.Left.Value : (double?)null));
+                    array.Items.Add(Coordinate(destination.Top.HasValue ? page.OriginY + page.Height - destination.Top.Value : (double?)null));
                     array.Items.Add(Coordinate(destination.Zoom));
                     break;
             }
@@ -84,8 +84,8 @@ namespace LifeOS.Pdf.Internal
             foreach (var annotation in page.Annotations)
             {
                 var obj = _new();
-                var left = annotation.X;
-                var bottom = page.Height - annotation.Y - annotation.Height;
+                var left = page.OriginX + annotation.X;
+                var bottom = page.OriginY + page.Height - annotation.Y - annotation.Height;
                 var dict = new PdfDictionary()
                     .Set("Type", "Annot")
                     .Set("Subtype", annotation.Subtype)

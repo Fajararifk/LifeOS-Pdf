@@ -11,14 +11,17 @@ namespace LifeOS.Pdf.Internal
     /// </summary>
     internal static class Zlib
     {
-        public static byte[] Compress(byte[] data)
+        public static byte[] Compress(byte[] data) => Compress(data, CompressionLevel.Optimal);
+
+        public static byte[] Compress(byte[] data, CompressionLevel level)
         {
-            using (var ms = new MemoryStream())
+            using (var ms = new MemoryStream(data.Length / 3 + 64))
             {
-                // CMF = deflate, 32K window; FLG = default compression, valid FCHECK.
+                // CMF = deflate, 32K window; FLG = compression level hint with a valid FCHECK
+                // (0x9C default, 0x01 fastest — decoders ignore the hint).
                 ms.WriteByte(0x78);
-                ms.WriteByte(0x9C);
-                using (var deflate = new DeflateStream(ms, CompressionLevel.Optimal, leaveOpen: true))
+                ms.WriteByte(level == CompressionLevel.Optimal ? (byte)0x9C : (byte)0x01);
+                using (var deflate = new DeflateStream(ms, level, leaveOpen: true))
                 {
                     deflate.Write(data, 0, data.Length);
                 }
@@ -93,11 +96,23 @@ namespace LifeOS.Pdf.Internal
         internal static uint Adler32(byte[] data)
         {
             const uint Mod = 65521;
+
+            // 5552 is the largest block for which the sums cannot overflow 32 bits before the
+            // modulo (RFC 1950 / zlib's NMAX), so the expensive '%' runs once per block.
+            const int Block = 5552;
             uint a = 1, b = 0;
-            foreach (var d in data)
+            var i = 0;
+            while (i < data.Length)
             {
-                a = (a + d) % Mod;
-                b = (b + a) % Mod;
+                var end = Math.Min(data.Length, i + Block);
+                for (; i < end; i++)
+                {
+                    a += data[i];
+                    b += a;
+                }
+
+                a %= Mod;
+                b %= Mod;
             }
 
             return (b << 16) | a;

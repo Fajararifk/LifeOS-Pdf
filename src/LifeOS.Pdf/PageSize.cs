@@ -27,6 +27,15 @@ namespace LifeOS.Pdf
             Height = height;
         }
 
+        // For pages read from a file: their size is whatever the file says (it was not created here).
+        private PageSize(double width, double height, bool unchecked_)
+        {
+            Width = width;
+            Height = height;
+        }
+
+        internal static PageSize Unchecked(double width, double height) => new PageSize(width, height, true);
+
         public double Width { get; }
 
         public double Height { get; }

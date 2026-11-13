@@ -128,15 +128,15 @@ namespace LifeOS.Pdf.Layout.Engine
             for (var i = 0; i < text.Length; i++)
             {
                 int cp = text[i];
-                var s = text.Substring(i, 1);
+                var length = 1;
                 if (char.IsHighSurrogate(text[i]) && i + 1 < text.Length && char.IsLowSurrogate(text[i + 1]))
                 {
                     cp = char.ConvertToUtf32(text[i], text[i + 1]);
-                    s = text.Substring(i, 2);
-                    i++;
+                    length = 2;
                 }
 
-                AddCodePoint(cp, s, style);
+                AddCodePoint(cp, text, i, length, style);
+                i += length - 1;
             }
         }
 
@@ -152,7 +152,7 @@ namespace LifeOS.Pdf.Layout.Engine
             return _atoms;
         }
 
-        private void AddCodePoint(int cp, string s, ResolvedStyle style)
+        private void AddCodePoint(int cp, string s, int start, int length, ResolvedStyle style)
         {
             switch (cp)
             {
@@ -183,13 +183,13 @@ namespace LifeOS.Pdf.Layout.Engine
                 if (NoBreakBefore(cp))
                 {
                     // Closing punctuation stays with the previous character.
-                    AppendToWord(cp, s, style);
+                    AppendToWord(cp, s, start, length, style);
                     FlushWord();
                     return;
                 }
 
                 FlushWord();
-                AppendToWord(cp, s, style);
+                AppendToWord(cp, s, start, length, style);
                 FlushWord();
                 return;
             }
@@ -201,7 +201,7 @@ namespace LifeOS.Pdf.Layout.Engine
                 _atoms.RemoveAt(_atoms.Count - 1);
             }
 
-            AppendToWord(cp, s, style);
+            AppendToWord(cp, s, start, length, style);
             if (cp == '-' || cp == 0x2010 || cp == 0x2013 || cp == 0x2014)
             {
                 FlushWord(); // break allowed after a hyphen or dash
@@ -222,7 +222,7 @@ namespace LifeOS.Pdf.Layout.Engine
             atom.Pieces.Add(Measure(" ", style, style.PrimaryFace, isSpace: true));
         }
 
-        private void AppendToWord(int cp, string s, ResolvedStyle style)
+        private void AppendToWord(int cp, string s, int start, int length, ResolvedStyle style)
         {
             if (_word == null)
             {
@@ -238,7 +238,7 @@ namespace LifeOS.Pdf.Layout.Engine
             _pieceStyle = style;
             _pieceFace = face;
             _pieceIsSpace = false;
-            _pieceText.Append(s);
+            _pieceText.Append(s, start, length);
         }
 
         private void FlushPiece()
@@ -265,7 +265,7 @@ namespace LifeOS.Pdf.Layout.Engine
         private Piece Measure(string text, ResolvedStyle style, PdfFontFace face, bool isSpace)
         {
             var font = _ctx.Font(face, style.Size);
-            return new Piece(style, font, text, font.Map(text, style.Kerning), isSpace);
+            return new Piece(style, font, text, _ctx.Map(font, text, style.Kerning), isSpace);
         }
 
         internal static bool IsCjk(int cp) =>

@@ -89,6 +89,10 @@ jobs:
           python tools/validate_pdf.py out/*/navigation.pdf --expect-text "Daftar Isi" \
             --expect-outline "1. Pendahuluan" --expect-outline "2.3 Laporan" --expect-outline "Anotasi" \
             --expect-link "https://github.com/Fajararifk/LifeOS-Pdf" --expect-attachment "pengeluaran.csv" --expect-attachment "ringkasan.json"
+          python tools/validate_pdf.py out/*/merged.pdf out/*/merged-compact.pdf --expect-text "Halaman 12 dari 12" \
+            --expect-text "LIFEOS-000012" --expect-text "Rp24.031.500" --expect-outline "Laporan Keuangan November 2026" \
+            --expect-outline "1. Pendahuluan" --expect-link "https://github.com/Fajararifk/LifeOS-Pdf"
+          python tools/validate_pdf.py out/*/invoice-letterhead.pdf --expect-text "fajardigital.id"
 
       - uses: actions/upload-artifact@v4
         with:

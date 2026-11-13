@@ -52,6 +52,9 @@ namespace LifeOS.Pdf.Navigation
         }
 
         /// <summary>Shows the whole page.</summary>
+        /// <summary>The same view on another page (used when pages are copied between documents).</summary>
+        internal PdfDestination WithPage(PdfPage page) => new PdfDestination(page, null, View, Left, Top, Zoom);
+
         public static PdfDestination FitPage(PdfPage page)
         {
             RequirePage(page);
