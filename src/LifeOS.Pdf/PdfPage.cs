@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 using LifeOS.Pdf.Drawing;
 using LifeOS.Pdf.Fonts;
 using LifeOS.Pdf.Images;
+using LifeOS.Pdf.Internal;
 
 namespace LifeOS.Pdf
 {
@@ -28,16 +30,19 @@ namespace LifeOS.Pdf
         /// <summary>Draw on this page (origin top-left, units in points).</summary>
         public PdfGraphics Graphics { get; }
 
-        /// <summary>Resource name → font, only the fonts this page uses.</summary>
-        internal SortedDictionary<string, StandardFont> Fonts { get; } = new SortedDictionary<string, StandardFont>(System.StringComparer.Ordinal);
+        /// <summary>Resource name → font face, only the fonts this page uses.</summary>
+        internal SortedDictionary<string, PdfFontFace> Fonts { get; } = new SortedDictionary<string, PdfFontFace>(StringComparer.Ordinal);
 
         /// <summary>Resource name → image, only the images this page uses.</summary>
-        internal SortedDictionary<string, PdfImage> Images { get; } = new SortedDictionary<string, PdfImage>(System.StringComparer.Ordinal);
+        internal SortedDictionary<string, PdfImage> Images { get; } = new SortedDictionary<string, PdfImage>(StringComparer.Ordinal);
 
-        internal string UseFont(StandardFont font)
+        /// <summary>Resource names of the graphics states (opacity) this page uses.</summary>
+        internal SortedSet<string> GraphicsStates { get; } = new SortedSet<string>(StringComparer.Ordinal);
+
+        internal string UseFont(PdfFontFace face, TextRun run)
         {
-            var name = _document.Resources.FontName(font);
-            Fonts[name] = font;
+            var name = _document.Resources.FontName(face, run);
+            Fonts[name] = face;
             return name;
         }
 
@@ -45,6 +50,13 @@ namespace LifeOS.Pdf
         {
             var name = _document.Resources.ImageName(image);
             Images[name] = image;
+            return name;
+        }
+
+        internal string UseOpacity(double fill, double stroke)
+        {
+            var name = _document.Resources.GraphicsStateName(new OpacityState(fill, stroke));
+            GraphicsStates.Add(name);
             return name;
         }
     }

@@ -5,18 +5,22 @@ dependency. Jalan di **.NET Standard 2.0, .NET 5, 6, 7, 8, 9, dan 10**
 (dan .NET Framework 4.6.1+ lewat netstandard2.0).
 
 File yang dihasilkan divalidasi dengan qpdf, pypdf, dan PDFium (engine di
-balik PDF viewer Chrome), jadi bisa dibuka di Chrome, Edge, Firefox, Adobe
-Acrobat, maupun PDF reader lain.
+balik PDF viewer Chrome), dan font tertanamnya dengan fontTools serta OTS
+(sanitizer font di Chrome/Firefox), jadi bisa dibuka di Chrome, Edge, Firefox,
+Adobe Acrobat, maupun PDF reader lain.
 
-<p align="center"><img src="docs/images/showcase-p1.png" width="420" alt="Halaman contoh yang dibuat dengan LifeOS.Pdf"></p>
+<p align="center">
+  <img src="docs/images/showcase-p1.png" width="380" alt="Halaman contoh: teks, 14 font standar, bentuk, gambar JPEG">
+  <img src="docs/images/showcase-p3.png" width="380" alt="Halaman contoh: font Unicode tertanam, PNG transparan, rotasi dan watermark">
+</p>
 
 ## Status
 
 | Fase | Isi | Status |
 |---|---|---|
 | 0 | Core writer: halaman, teks 14 font standar, bentuk, JPEG, kompresi, metadata | ✅ v0.1 |
-| 1 | Font TrueType + Unicode, PNG, gambar → PDF | berikutnya |
-| 2 | Layout engine: paragraf, tabel multi-halaman, header/footer | rencana |
+| 1 | Font TrueType + Unicode, PNG transparan, gambar → PDF, rotasi & opacity | ✅ v0.2 |
+| 2 | Layout engine: paragraf, tabel multi-halaman, header/footer | berikutnya |
 | 3 | Laporan dari template (invoice, slip gaji, laporan keuangan) | rencana |
 | 4 | Buat QR & barcode (vektor, PNG, SVG) | rencana |
 | 5 | Link, bookmark, lampiran, anotasi | rencana |
@@ -54,6 +58,36 @@ g.DrawImage(PdfImage.FromFile("foto.jpg"), 72, 300, width: 250); // tinggi mengi
 doc.Save("laporan.pdf");
 ```
 
+### Font TrueType & Unicode, PNG, watermark
+
+```csharp
+var noto = PdfFontFace.FromFile("NotoSans-Regular.ttf");   // .ttf atau .ttc
+g.DrawText("Tiếng Việt · Ελληνικά · Русский · 日本語*", new PdfFont(noto, 12), 72, 400);
+// *selama font-nya punya glyph — cek dulu dengan noto.HasGlyph("日本語")
+
+g.DrawImage(PdfImage.FromFile("logo.png"), 400, 40, 120);   // PNG transparan
+
+using (g.Save())
+{
+    g.RotateAt(-35, page.Width / 2, page.Height / 2);
+    g.SetOpacity(0.1);
+    g.DrawText("DRAFT", new PdfFont(StandardFont.HelveticaBold, 120), page.Width / 2, page.Height / 2, align: TextAlign.Center);
+}
+```
+
+Font di-*subset* otomatis (hanya glyph yang dipakai ikut tertanam) dan teks tetap
+bisa di-copy serta dicari di viewer.
+
+### Gambar → PDF
+
+```csharp
+using LifeOS.Pdf.Conversion;
+
+var scan = ImageToPdf.Convert(new[] { "hal1.jpg", "hal2.png" },
+    new ImageToPdfOptions { PageSize = PageSize.A4, Margin = 36 });
+scan.Save("scan.pdf");
+```
+
 Contoh lengkap ada di [samples/LifeOS.Pdf.Samples](samples/LifeOS.Pdf.Samples/Program.cs).
 
 ## Build & test
@@ -69,7 +103,7 @@ dotnet run --project samples/LifeOS.Pdf.Samples -f net8.0 -- out/net8.0
 Validasi eksternal (Python 3.10+):
 
 ```bash
-pip install pikepdf pypdf pypdfium2
+pip install pikepdf pypdf pypdfium2 fonttools opentype-sanitizer
 python tools/validate_pdf.py out/net8.0/showcase.pdf --render-dir out/png
 ```
 

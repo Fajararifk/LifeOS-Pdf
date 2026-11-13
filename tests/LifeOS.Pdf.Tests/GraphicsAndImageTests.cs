@@ -143,10 +143,27 @@ namespace LifeOS.Pdf.Tests
         }
 
         [Fact]
-        public void NonJpeg_IsRejectedWithClearMessage()
+        public void UnsupportedFormat_IsRejectedWithClearMessage()
         {
-            var ex = Assert.Throws<NotSupportedException>(() => PdfImage.FromFile(Asset("not-a-jpeg.png")));
-            Assert.Contains("JPEG", ex.Message);
+            var gif = new byte[] { (byte)'G', (byte)'I', (byte)'F', (byte)'8', (byte)'9', (byte)'a', 1, 0, 1, 0, 0, 0, 0 };
+            var ex = Assert.Throws<NotSupportedException>(() => PdfImage.FromBytes(gif));
+            Assert.Contains("JPEG and PNG", ex.Message);
+        }
+
+        [Fact]
+        public void JpegDpi_IsReadFromJfifHeader()
+        {
+            Assert.Null(PdfImage.FromFile(Asset("rgb.jpg")).DpiX); // Pillow writes aspect-ratio only (units 0)
+
+            var bytes = File.ReadAllBytes(Asset("rgb.jpg"));
+            Assert.Equal((byte)'J', bytes[6]);
+            bytes[13] = 1;                      // units: dots per inch
+            bytes[14] = 0x01; bytes[15] = 0x2C; // X density 300
+            bytes[16] = 0x00; bytes[17] = 0x96; // Y density 150
+            var image = PdfImage.FromBytes(bytes);
+
+            Assert.Equal(300, image.DpiX);
+            Assert.Equal(150, image.DpiY);
         }
 
         [Fact]

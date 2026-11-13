@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.IO.Compression;
 
@@ -41,6 +42,52 @@ namespace LifeOS.Pdf.Internal
                 deflate.CopyTo(output);
                 return output.ToArray();
             }
+        }
+
+        /// <summary>
+        /// Inflates zlib data that must produce exactly <paramref name="expectedSize"/> bytes.
+        /// Stops reading as soon as the output would exceed it, so a decompression bomb
+        /// cannot allocate more than the caller already validated.
+        /// </summary>
+        public static byte[] Decompress(byte[] data, int expectedSize)
+        {
+            if (data.Length < 2 || (data[0] & 0x0F) != 8 || ((data[0] << 8) | data[1]) % 31 != 0 || (data[1] & 0x20) != 0)
+            {
+                throw new FormatException("Invalid compressed data: bad zlib header.");
+            }
+
+            var output = new byte[expectedSize];
+            var total = 0;
+            try
+            {
+                using (var input = new MemoryStream(data, 2, data.Length - 2))
+                using (var deflate = new DeflateStream(input, CompressionMode.Decompress))
+                {
+                    while (total < expectedSize)
+                    {
+                        var read = deflate.Read(output, total, expectedSize - total);
+                        if (read == 0)
+                        {
+                            break;
+                        }
+
+                        total += read;
+                    }
+
+                    // Extra bytes after the expected size are ignored (never read into memory).
+                }
+            }
+            catch (InvalidDataException ex)
+            {
+                throw new FormatException("Invalid compressed data: " + ex.Message, ex);
+            }
+
+            if (total != expectedSize)
+            {
+                throw new FormatException("Invalid compressed data: expected " + expectedSize + " bytes, got " + total + " (truncated).");
+            }
+
+            return output;
         }
 
         internal static uint Adler32(byte[] data)

@@ -5,6 +5,9 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using LifeOS.Pdf.Fonts;
+using LifeOS.Pdf.Fonts.Embedding;
+using LifeOS.Pdf.Fonts.Standard;
+using LifeOS.Pdf.Fonts.TrueType;
 using LifeOS.Pdf.Objects;
 
 namespace LifeOS.Pdf.Internal
@@ -29,34 +32,69 @@ namespace LifeOS.Pdf.Internal
                 return o;
             }
 
+            for (var i = 0; i < document.Pages.Count; i++)
+            {
+                if (document.Pages[i].Graphics.Depth != 0)
+                {
+                    throw new InvalidOperationException("Page " + (i + 1) + " has " + document.Pages[i].Graphics.Depth +
+                        " graphics state(s) still open. Call Restore() or dispose the object returned by Save() before saving.");
+                }
+            }
+
             var catalog = New();
             var pagesRoot = New();
 
-            // Shared resources: one object per font / image for the whole document.
-            var fontObjects = new Dictionary<StandardFont, PdfIndirectObject>();
-            foreach (var font in document.Resources.Fonts)
+            // Shared resources: one object per font / image / state for the whole document.
+            var fontObjects = new Dictionary<PdfFontFace, PdfIndirectObject>();
+            foreach (var face in document.Resources.Fonts)
             {
-                var metrics = StandardFontMetrics.For(font);
-                var dict = new PdfDictionary()
-                    .Set("Type", "Font")
-                    .Set("Subtype", "Type1")
-                    .Set("BaseFont", metrics.BaseFont);
-                if (!metrics.UsesBuiltInEncoding)
-                {
-                    dict.Set("Encoding", "WinAnsiEncoding");
-                }
-
                 var obj = New();
-                obj.Value = dict;
-                fontObjects[font] = obj;
+                fontObjects[face] = obj;
+                if (face.Program is StandardFontProgram standard)
+                {
+                    var dict = new PdfDictionary()
+                        .Set("Type", "Font")
+                        .Set("Subtype", "Type1")
+                        .Set("BaseFont", standard.Data.BaseFont);
+                    if (!standard.Data.UsesBuiltInEncoding)
+                    {
+                        dict.Set("Encoding", "WinAnsiEncoding");
+                    }
+
+                    obj.Value = dict;
+                }
+                else
+                {
+                    EmbeddedFontWriter.Write(obj, (TrueTypeFontProgram)face.Program, document.Resources.FontUsages[face], New);
+                }
             }
 
             var imageObjects = new Dictionary<Images.PdfImage, PdfIndirectObject>();
             foreach (var image in document.Resources.Images)
             {
                 var obj = New();
-                obj.Value = image.ToPdfStream();
+                var softMask = image.ToSoftMaskStream();
+                PdfReference? softMaskRef = null;
+                if (softMask != null)
+                {
+                    var maskObj = New();
+                    maskObj.Value = softMask;
+                    softMaskRef = maskObj.Reference;
+                }
+
+                obj.Value = image.ToPdfStream(softMaskRef);
                 imageObjects[image] = obj;
+            }
+
+            var stateObjects = new Dictionary<string, PdfIndirectObject>(StringComparer.Ordinal);
+            foreach (var state in document.Resources.GraphicsStates)
+            {
+                var obj = New();
+                obj.Value = new PdfDictionary()
+                    .Set("Type", "ExtGState")
+                    .Set("CA", new PdfReal(state.Value.Stroke))
+                    .Set("ca", new PdfReal(state.Value.Fill));
+                stateObjects[state.Key] = obj;
             }
 
             var kids = new PdfArray();
@@ -96,6 +134,17 @@ namespace LifeOS.Pdf.Internal
                     }
 
                     resources.Set("XObject", xobjects);
+                }
+
+                if (page.GraphicsStates.Count > 0)
+                {
+                    var states = new PdfDictionary();
+                    foreach (var name in page.GraphicsStates)
+                    {
+                        states.Set(name, stateObjects[name].Reference);
+                    }
+
+                    resources.Set("ExtGState", states);
                 }
 
                 pageObj.Value = new PdfDictionary()

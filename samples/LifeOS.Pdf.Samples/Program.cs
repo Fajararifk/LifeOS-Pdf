@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.IO;
 using LifeOS.Pdf;
+using LifeOS.Pdf.Conversion;
 using LifeOS.Pdf.Drawing;
 using LifeOS.Pdf.Fonts;
 using LifeOS.Pdf.Images;
@@ -28,13 +29,14 @@ namespace LifeOS.Pdf.Samples
             Directory.CreateDirectory(outputDir);
 
             var doc = new PdfDocument();
-            doc.Info.Title = "LifeOS.Pdf — Showcase Fase 0";
+            doc.Info.Title = "LifeOS.Pdf — Showcase";
             doc.Info.Author = "LifeOS.Pdf";
-            doc.Info.Subject = "Contoh semua fitur Core Writer v0.1";
+            doc.Info.Subject = "Contoh fitur Fase 0 dan Fase 1";
             doc.Info.Creator = "LifeOS.Pdf.Samples (" + RuntimeName() + ")";
 
             ShowcasePage(doc);
             InvoicePage(doc);
+            UnicodePage(doc);
 
             for (var i = 0; i < doc.Pages.Count; i++)
             {
@@ -44,8 +46,107 @@ namespace LifeOS.Pdf.Samples
             var path = Path.Combine(outputDir, "showcase.pdf");
             doc.Save(path);
             Console.WriteLine("Wrote " + path + " (" + new FileInfo(path).Length + " bytes) on " + RuntimeName());
+
+            // Image → PDF conversion: one image per A4 page.
+            var images = ImageToPdf.Convert(
+                new[] { Asset("landscape.jpg"), Asset("badge.png") },
+                new ImageToPdfOptions { PageSize = PageSize.A4, Margin = 36 });
+            images.Info.Title = "LifeOS.Pdf — ImageToPdf";
+            var imagesPath = Path.Combine(outputDir, "images.pdf");
+            images.Save(imagesPath);
+            Console.WriteLine("Wrote " + imagesPath + " (" + new FileInfo(imagesPath).Length + " bytes)");
             return 0;
         }
+
+        private static void UnicodePage(PdfDocument doc)
+        {
+            var page = doc.AddPage(PageSize.A4);
+            var g = page.Graphics;
+            var width = page.Width - 2 * Margin;
+            var noto = PdfFontFace.FromFile(Asset("NotoSans-sample.ttf"));
+
+            g.FillRectangle(Accent, 0, 0, page.Width, 8);
+            g.DrawText("Font tertanam & Unicode", new PdfFont(noto, 24), Margin, 48, Ink);
+            g.DrawText("Noto Sans (SIL OFL) di-subset otomatis: hanya glyph yang dipakai ikut tertanam.",
+                new PdfFont(noto, 10), Margin, 84, Muted);
+
+            var y = 120.0;
+            Heading(g, "Bahasa & aksara", y);
+            y += 22;
+            var lines = new[]
+            {
+                "Indonesia — Rp1.350.000 · tanggal 13 November 2026 · “kutip” dan ‘apostrof’",
+                "Tiếng Việt — Xin chào thế giới, đồng ₫ và chữ có dấu ệ ữ ộ",
+                "Ελληνικά — Καλημέρα κόσμε · αβγδεζηθ ΩΣΔ",
+                "Русский — Привет, мир! Ёжик в тумане",
+                "Simbol — € £ ¥ © ® ™ № ‰ ° ± × ÷ ½ ¾",
+            };
+            var body = new PdfFont(noto, 12);
+            foreach (var line in lines)
+            {
+                g.DrawText(line, body, Margin, y, Ink);
+                y += 20;
+            }
+
+            // Check before drawing: characters without a glyph would show as empty boxes.
+            // (The check is printed with escaped code points, so no box appears here.)
+            const string math = "→∑∞";
+            y += g.DrawTextBox("noto.HasGlyph(\"\\u2192\\u2211\\u221E\") = " + noto.HasGlyph(math) +
+                               " — Noto Sans tidak punya panah & simbol matematika; untuk itu pakai font lain, mis. Noto Sans Math.",
+                new PdfFont(noto, 9), Margin, y, width, Muted) + 8;
+
+            // Optional: a CJK TrueType font from Windows, if present (not shipped with the repo).
+            var cjkPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "msgothic.ttc");
+            if (File.Exists(cjkPath))
+            {
+                var gothic = PdfFontFace.FromFile(cjkPath);
+                g.DrawText("日本語 — こんにちは世界（MS Gothic, font Windows lokal）", new PdfFont(gothic, 12), Margin, y, Ink);
+                y += 20;
+            }
+
+            y += 16;
+            Heading(g, "PNG transparan, rotasi & opacity", y);
+            y += 24;
+
+            // Stripes behind the badge make the transparency visible.
+            for (var i = 0; i < 8; i++)
+            {
+                g.FillRectangle(i % 2 == 0 ? PdfColor.FromHex("#FDE68A") : PdfColor.FromHex("#BFDBFE"), Margin + i * 20, y, 20, 120);
+            }
+
+            g.DrawImage(PdfImage.FromFile(Asset("badge.png")), Margin + 20, y, 120);
+
+            var cx = Margin + 300;
+            var cy = y + 60;
+            for (var angle = 0; angle < 360; angle += 45)
+            {
+                using (g.Save())
+                {
+                    g.RotateAt(angle, cx, cy);
+                    g.SetOpacity(0.35 + angle / 720.0);
+                    g.DrawText("  LifeOS.Pdf", new PdfFont(noto, 11), cx, cy - 6, Accent);
+                }
+            }
+
+            y += 150;
+            Heading(g, "Paragraf Unicode dengan word-wrap", y);
+            y += 22;
+            g.DrawTextBox(
+                "Teks dengan font tertanam tetap bisa di-copy dan dicari di viewer karena setiap glyph punya peta ToUnicode. " +
+                "Lebar huruf diambil langsung dari tabel hmtx font, sehingga rata kanan, tengah, dan word-wrap akurat: " +
+                "Hà Nội, Αθήνα, Москва, dan Jakarta.",
+                new PdfFont(noto, 11), Margin, y, width, Ink, TextAlign.Left, 1.4);
+
+            // Diagonal watermark across the page.
+            using (g.Save())
+            {
+                g.RotateAt(-35, page.Width / 2, page.Height / 2);
+                g.SetOpacity(0.08);
+                g.DrawText("CONTOH", new PdfFont(StandardFont.HelveticaBold, 120), page.Width / 2, page.Height / 2 - 60, Ink, TextAlign.Center);
+            }
+        }
+
+        private static string Asset(string name) => Path.Combine(AppContext.BaseDirectory, "Assets", name);
 
         private static void ShowcasePage(PdfDocument doc)
         {
@@ -55,7 +156,7 @@ namespace LifeOS.Pdf.Samples
 
             g.FillRectangle(Accent, 0, 0, page.Width, 8);
             g.DrawText("LifeOS.Pdf", new PdfFont(StandardFont.HelveticaBold, 28), Margin, 48, Ink);
-            g.DrawText("Core Writer v0.1 — dibuat dari nol dengan C#, tanpa dependency.", new PdfFont(StandardFont.Helvetica, 11), Margin, 84, Muted);
+            g.DrawText("v0.2 — dibuat dari nol dengan C#, tanpa dependency.", new PdfFont(StandardFont.Helvetica, 11), Margin, 84, Muted);
 
             var imagePath = Path.Combine(AppContext.BaseDirectory, "Assets", "landscape.jpg");
             var image = PdfImage.FromFile(imagePath);
@@ -97,7 +198,8 @@ namespace LifeOS.Pdf.Samples
             y += 24;
             const string paragraph =
                 "LifeOS.Pdf adalah library PDF open-source untuk .NET yang ditulis dari nol. " +
-                "Fase 0 mencakup halaman, teks, garis, kotak, elips, gambar JPEG, kompresi Flate, dan metadata dokumen. " +
+                "Fase 0 dan 1 mencakup halaman, teks, font TrueType tertanam, garis, kotak, elips, gambar JPEG & PNG, " +
+                "rotasi, transparansi, kompresi Flate, dan metadata dokumen. " +
                 "File yang dihasilkan valid menurut ISO 32000 dan bisa dibuka di Chrome, Edge, Firefox, Adobe Acrobat, maupun PDF reader lain.";
             var body = new PdfFont(StandardFont.TimesRoman, 11);
             var columnGap = 20;

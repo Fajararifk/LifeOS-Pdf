@@ -18,6 +18,9 @@ namespace LifeOS.Pdf.Drawing
         // Control-point distance that makes four cubic Béziers approximate a circle.
         private const double Kappa = 0.5522847498;
 
+        // Annex C allows 28 nested q; every drawing call adds one level of its own.
+        private const int MaxUserDepth = 27;
+
         private readonly PdfPage _page;
         private readonly StringBuilder _ops = new StringBuilder();
 
@@ -197,6 +200,99 @@ namespace LifeOS.Pdf.Drawing
             DrawImage(image, x, y, width, width * image.PixelHeight / image.PixelWidth);
         }
 
+        /// <summary>
+        /// Saves the graphics state. Use with <c>using</c>; transformations, opacity and
+        /// clipping set afterwards are undone when the returned object is disposed.
+        /// </summary>
+        public PdfGraphicsState Save()
+        {
+            if (Depth >= MaxUserDepth)
+            {
+                throw new InvalidOperationException("Graphics states are nested more than " + MaxUserDepth +
+                    " levels deep. PDF viewers only guarantee 28 levels (ISO 32000-1 Annex C); restore earlier states first.");
+            }
+
+            _ops.Append("q\n");
+            Depth++;
+            return new PdfGraphicsState(this, Depth);
+        }
+
+        /// <summary>Restores the state saved by the matching <see cref="Save"/>.</summary>
+        public void Restore()
+        {
+            if (Depth == 0)
+            {
+                throw new InvalidOperationException("Restore() was called without a matching Save().");
+            }
+
+            _ops.Append("Q\n");
+            Depth--;
+        }
+
+        /// <summary>Moves the origin by (dx, dy) points; positive dy moves down.</summary>
+        public void Translate(double dx, double dy)
+        {
+            RequireFinite(dx, dy);
+            Op("1", "0", "0", "1", N(dx), N(-dy), "cm");
+        }
+
+        /// <summary>Rotates everything drawn afterwards around (x, y). Positive degrees turn clockwise, as on screen.</summary>
+        public void RotateAt(double degrees, double x, double y)
+        {
+            RequireFinite(degrees, x, y);
+            // PDF's y axis points up, so a clockwise turn on screen is a negative angle there.
+            var radians = -degrees * Math.PI / 180.0;
+            var cos = Math.Cos(radians);
+            var sin = Math.Sin(radians);
+            var px = x;
+            var py = Y(y);
+            // Row-vector matrix for translate(-p) · rotate · translate(p).
+            Op(N(cos), N(sin), N(-sin), N(cos), N(px - px * cos + py * sin), N(py - px * sin - py * cos), "cm");
+        }
+
+        /// <summary>Scales everything drawn afterwards around (x, y). Negative factors mirror.</summary>
+        public void ScaleAt(double scaleX, double scaleY, double x, double y)
+        {
+            RequireFinite(scaleX, scaleY, x, y);
+            if (scaleX == 0 || scaleY == 0)
+            {
+                throw new ArgumentOutOfRangeException(scaleX == 0 ? nameof(scaleX) : nameof(scaleY), "Scale factor must not be zero.");
+            }
+
+            var px = x;
+            var py = Y(y);
+            Op(N(scaleX), "0", "0", N(scaleY), N(px - scaleX * px), N(py - scaleY * py), "cm");
+        }
+
+        /// <summary>Sets the opacity (0 = invisible, 1 = opaque) for fills, strokes, text and images.</summary>
+        public void SetOpacity(double opacity) => SetOpacity(opacity, opacity);
+
+        /// <summary>Sets fill opacity (fills, text, images) and stroke opacity separately.</summary>
+        public void SetOpacity(double fill, double stroke)
+        {
+            RequireUnit(fill, nameof(fill));
+            RequireUnit(stroke, nameof(stroke));
+            var name = _page.UseOpacity(Math.Round(fill, 4), Math.Round(stroke, 4));
+            Op("/" + name, "gs");
+        }
+
+        /// <summary>Limits drawing to a rectangle until the state is restored.</summary>
+        public void ClipRectangle(double x, double y, double width, double height)
+        {
+            RequireBox(x, y, width, height);
+            Op(N(x), N(Y(y) - height), N(width), N(height), "re", "W", "n");
+        }
+
+        internal int Depth { get; private set; }
+
+        internal void RestoreTo(int depth)
+        {
+            while (Depth > depth && Depth > 0)
+            {
+                Restore();
+            }
+        }
+
         internal static List<string> WrapText(string text, PdfFont font, double width)
         {
             var lines = new List<string>();
@@ -241,16 +337,17 @@ namespace LifeOS.Pdf.Drawing
 
         private void WriteTextLine(string line, PdfFont font, double x, double top, PdfColor color, TextAlign align)
         {
-            var bytes = font.Encode(line);
+            var run = font.Map(line);
+            var bytes = run.Codes;
             if (bytes.Length == 0)
             {
                 return;
             }
 
-            var textWidth = font.MeasureWidth(line);
+            var textWidth = run.Width * font.Size / 1000.0;
             var left = align == TextAlign.Left ? x : align == TextAlign.Center ? x - textWidth / 2 : x - textWidth;
             var baseline = Y(top + font.Ascent);
-            var name = _page.UseFont(font.Family);
+            var name = _page.UseFont(font.Face, run);
 
             Begin();
             Op(ColorOperands(color), "rg");
@@ -347,6 +444,15 @@ namespace LifeOS.Pdf.Drawing
             foreach (var v in values)
             {
                 PdfFormat.RequireFinite(v, "coordinate");
+            }
+        }
+
+        private static void RequireUnit(double value, string paramName)
+        {
+            PdfFormat.RequireFinite(value, paramName);
+            if (value < 0 || value > 1)
+            {
+                throw new ArgumentOutOfRangeException(paramName, value, "Opacity must be between 0 and 1.");
             }
         }
 

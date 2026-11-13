@@ -1,0 +1,9 @@
+# Normalize text files; never touch binary test assets (line-ending conversion would corrupt them).
+* text=auto
+*.ref binary
+*.ttf binary
+*.ttc binary
+*.otf binary
+*.png binary
+*.jpg binary
+*.pdf binary

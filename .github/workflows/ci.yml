@@ -34,6 +34,8 @@ jobs:
         run: dotnet test -c Release --no-build --logger "console;verbosity=normal"
 
   runtimes:
+    env:
+      PYTHONIOENCODING: utf-8
     # Proves the package really runs on every supported runtime and that the
     # output opens in independent PDF engines. Windows still ships every
     # runtime back to .NET 5 without extra system libraries.
@@ -57,7 +59,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      - run: pip install pikepdf pypdf pypdfium2
+      - run: pip install pikepdf pypdf pypdfium2 fonttools opentype-sanitizer
 
       - name: Run sample on every runtime
         shell: bash
@@ -69,7 +71,11 @@ jobs:
 
       - name: Validate with qpdf, pypdf and PDFium
         shell: bash
-        run: python tools/validate_pdf.py out/*/showcase.pdf --expect-text "Halaman 2 dari 2" --render-dir out/png
+        run: |
+          python tools/validate_pdf.py out/*/showcase.pdf --render-dir out/png \
+            --expect-text "Halaman 3 dari 3" --expect-text "Rp1.924.500" \
+            --expect-text "Xin chào thế giới" --expect-text "Καλημέρα κόσμε" --expect-text "Привет, мир"
+          python tools/validate_pdf.py out/*/images.pdf --render-dir out/png
 
       - uses: actions/upload-artifact@v4
         with:

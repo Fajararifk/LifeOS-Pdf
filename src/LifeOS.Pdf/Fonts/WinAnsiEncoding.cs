@@ -11,36 +11,47 @@ namespace LifeOS.Pdf.Fonts
         public const byte Replacement = (byte)'?';
 
         // 0x80–0x9F is where Windows-1252 differs from Latin-1.
-        private static readonly Dictionary<char, byte> Upper = new Dictionary<char, byte>
+        private static readonly Dictionary<int, byte> Upper = new Dictionary<int, byte>
         {
-            ['€'] = 0x80, // €
-            ['‚'] = 0x82, // ‚
-            ['ƒ'] = 0x83, // ƒ
-            ['„'] = 0x84, // „
-            ['…'] = 0x85, // …
-            ['†'] = 0x86, // †
-            ['‡'] = 0x87, // ‡
-            ['ˆ'] = 0x88, // ˆ
-            ['‰'] = 0x89, // ‰
-            ['Š'] = 0x8A, // Š
-            ['‹'] = 0x8B, // ‹
-            ['Œ'] = 0x8C, // Œ
-            ['Ž'] = 0x8E, // Ž
-            ['‘'] = 0x91, // ‘
-            ['’'] = 0x92, // ’
-            ['“'] = 0x93, // “
-            ['”'] = 0x94, // ”
-            ['•'] = 0x95, // •
-            ['–'] = 0x96, // –
-            ['—'] = 0x97, // —
-            ['˜'] = 0x98, // ˜
-            ['™'] = 0x99, // ™
-            ['š'] = 0x9A, // š
-            ['›'] = 0x9B, // ›
-            ['œ'] = 0x9C, // œ
-            ['ž'] = 0x9E, // ž
-            ['Ÿ'] = 0x9F, // Ÿ
+            [0x20AC] = 0x80, // €
+            [0x201A] = 0x82, // ‚
+            [0x0192] = 0x83, // ƒ
+            [0x201E] = 0x84, // „
+            [0x2026] = 0x85, // …
+            [0x2020] = 0x86, // †
+            [0x2021] = 0x87, // ‡
+            [0x02C6] = 0x88, // ˆ
+            [0x2030] = 0x89, // ‰
+            [0x0160] = 0x8A, // Š
+            [0x2039] = 0x8B, // ‹
+            [0x0152] = 0x8C, // Œ
+            [0x017D] = 0x8E, // Ž
+            [0x2018] = 0x91, // ‘
+            [0x2019] = 0x92, // ’
+            [0x201C] = 0x93, // “
+            [0x201D] = 0x94, // ”
+            [0x2022] = 0x95, // •
+            [0x2013] = 0x96, // –
+            [0x2014] = 0x97, // —
+            [0x02DC] = 0x98, // ˜
+            [0x2122] = 0x99, // ™
+            [0x0161] = 0x9A, // š
+            [0x203A] = 0x9B, // ›
+            [0x0153] = 0x9C, // œ
+            [0x017E] = 0x9E, // ž
+            [0x0178] = 0x9F, // Ÿ
         };
+
+        public static bool TryEncode(int codePoint, out byte code)
+        {
+            if ((codePoint >= 0x20 && codePoint < 0x7F) || (codePoint >= 0xA0 && codePoint <= 0xFF))
+            {
+                code = (byte)codePoint;
+                return true;
+            }
+
+            return Upper.TryGetValue(codePoint, out code);
+        }
 
         /// <summary>
         /// Encodes text. Characters outside WinAnsi become '?'. Tabs become a space;
@@ -48,47 +59,14 @@ namespace LifeOS.Pdf.Fonts
         /// </summary>
         public static byte[] Encode(string text)
         {
-            var bytes = new List<byte>(text.Length);
-            foreach (var c in text)
+            var codePoints = CodePointReader.Read(text);
+            var bytes = new byte[codePoints.Count];
+            for (var i = 0; i < bytes.Length; i++)
             {
-                if (c == '\t')
-                {
-                    bytes.Add((byte)' ');
-                }
-                else if (c < 0x20)
-                {
-                    // Control characters have no glyph; skip.
-                }
-                else if (c < 0x7F || (c >= 0xA0 && c <= 0xFF))
-                {
-                    bytes.Add((byte)c);
-                }
-                else if (Upper.TryGetValue(c, out var b))
-                {
-                    bytes.Add(b);
-                }
-                else
-                {
-                    bytes.Add(Replacement);
-                }
+                bytes[i] = TryEncode(codePoints[i], out var b) ? b : Replacement;
             }
 
-            return bytes.ToArray();
-        }
-
-        /// <summary>Symbol and ZapfDingbats use their own built-in encoding: pass bytes through.</summary>
-        public static byte[] EncodeBuiltIn(string text)
-        {
-            var bytes = new List<byte>(text.Length);
-            foreach (var c in text)
-            {
-                if (c >= 0x20 && c <= 0xFF)
-                {
-                    bytes.Add((byte)c);
-                }
-            }
-
-            return bytes.ToArray();
+            return bytes;
         }
     }
 }

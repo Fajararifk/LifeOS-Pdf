@@ -54,10 +54,10 @@ nol tidak realistis (browser engine, OCR).
 | # | Use case | Fase | Cara |
 |---|---|---|---|
 | 1 | PDF dari HTML (WkHtmlToPdf) | 11 | Integrasi: `LifeOS.Pdf.Html`, backend wkhtmltopdf **dan** Chromium |
-| 2 | PDF dari kode C# (layout, tabel, gambar, header/footer) | 0 ✅ + 2 | Dari nol |
+| 2 | PDF dari kode C# (layout, tabel, gambar, header/footer) | 0 ✅ + 1 ✅ + 2 | Dari nol |
 | 3 | Membuat PDF + manipulasi dasar | 0 ✅ + 6 | Dari nol |
 | 4 | Buat, ekstrak teks, merge, split, isi form, enkripsi | 6, 7, 8, 9 | Dari nol |
-| 5 | Membuat & convert PDF (gambar↔PDF, PDF→teks/CSV, PDF/A) | 1, 7, 10, 12 | Dari nol + integrasi render |
+| 5 | Membuat & convert PDF (gambar↔PDF, PDF→teks/CSV, PDF/A) | 1 ✅ (gambar→PDF), 7, 10, 12 | Dari nol + integrasi render |
 | 6 | Laporan PDF dari template | 3 | Dari nol |
 | 7 | Gambar QR untuk ditempel ke PDF | 4 | Dari nol (vektor di PDF + PNG/SVG) |
 | 8 | Baca QR/barcode dari gambar | 10 | Integrasi: ZXing.Net (Apache-2.0) |
@@ -73,7 +73,7 @@ parser (merge, ekstrak, form) menyusul, lalu integrasi engine eksternal di akhir
 | Kemampuan | PDFsharp | iText | ByteScout | LifeOS.Pdf |
 |---|---|---|---|---|
 | Buat PDF (teks, shape, gambar) | ✓ | ✓ | ✓ | Fase 0 ✅ |
-| Font TrueType + Unicode, PNG | ✓ | ✓ | ✓ | Fase 1 |
+| Font TrueType + Unicode, PNG | ✓ | ✓ | ✓ | Fase 1 ✅ |
 | Layout engine (tabel, flow, header/footer) | MigraDoc | ✓ | ✓ | Fase 2 |
 | Laporan dari template | – | pdfHTML | ✓ | Fase 3 |
 | QR & barcode (buat) | – | ✓ | ✓ | Fase 4 |
@@ -99,7 +99,8 @@ SPESIFIKASI:
 - Gambar JPEG (gray/RGB/CMYK) tanpa re-encode, dipakai ulang lintas halaman.
 - Kompresi Flate untuk content stream.
 
-## FASE 1 — Font, Gambar & Image→PDF (v0.2)  · use case 5
+## FASE 1 — Font, Gambar & Image→PDF ✅ (v0.2)  · use case 5
+Selesai. Kerning dipindah ke Fase 2, PNG encoder ke Fase 4 (lihat design-fase1.md).
 SPESIFIKASI:
 - Parser TrueType/OpenType (head, hhea, hmtx, cmap, glyf, loca, OS/2, name, post).
 - Embedding Type0/CIDFontType2 + Identity-H + subsetting (hanya glyph terpakai).

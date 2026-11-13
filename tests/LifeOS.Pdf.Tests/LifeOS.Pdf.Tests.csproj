@@ -16,6 +16,11 @@
     <ProjectReference Include="..\..\src\LifeOS.Pdf\LifeOS.Pdf.csproj" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <!-- Tests call internal APIs, some of which use nullable reference conventions loosely. -->
+    <NoWarn>$(NoWarn);xUnit1026</NoWarn>
+  </PropertyGroup>
+
   <ItemGroup>
     <None Include="TestAssets\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
