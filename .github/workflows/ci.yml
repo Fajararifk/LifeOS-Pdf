@@ -93,6 +93,8 @@ jobs:
             --expect-text "LIFEOS-000012" --expect-text "Rp24.031.500" --expect-outline "Laporan Keuangan November 2026" \
             --expect-outline "1. Pendahuluan" --expect-link "https://github.com/Fajararifk/LifeOS-Pdf"
           python tools/validate_pdf.py out/*/invoice-letterhead.pdf --expect-text "fajardigital.id"
+          python tools/validate_pdf.py out/*/invoice-redacted.pdf --expect-text "Rp24.031.500" \
+            --forbid-text "PT Maju Bersama Sejahtera" --forbid-text "majubersama"
 
       - uses: actions/upload-artifact@v4
         with:

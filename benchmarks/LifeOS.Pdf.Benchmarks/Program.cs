@@ -50,6 +50,7 @@ namespace LifeOS.Pdf.Benchmarks
                 ("F6 merge 10× report + watermark", () => Merge(report, 10)),
                 ("F6 open 2000-page file (" + big.Length / 1024 + " KB)", () => PdfDocument.Open(big).Pages.Count),
                 ("F6 open+save 2000-page file", () => PdfDocument.Open(big).ToArray()),
+                ("F7 extract text + tables from report", () => { var d = PdfDocument.Open(report); var n = 0; foreach (var p in d.Pages) { n += p.ExtractText().Length + p.ExtractTables().Count; } return n; }),
             };
 
             Console.WriteLine("LifeOS.Pdf benchmarks — " + RuntimeName() + (quick ? " (quick)" : string.Empty));

@@ -3,6 +3,26 @@
 Format: [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 Before v1.0, a minor version may contain breaking changes (always listed here).
 
+## [0.8.0] — Phase 7: Content extraction
+
+### Added
+- Content-stream interpreter (graphics and text state, form XObjects with depth/cycle/work limits,
+  inline images, ruling lines) and font decoding: ToUnicode CMaps, Standard/WinAnsi/MacRoman
+  encodings with /Differences and the Adobe Glyph List, Type0/CID (/W, /DW), Type3, standard-14 widths.
+- `PdfPage.ExtractText`, `GetTextLines`, `GetWords`, `GetGlyphs` (text with boxes, font, size,
+  bold/italic; reading order; `TextExtractionOptions`: area, layout mode, column detection,
+  invisible text); `PdfDocument.ExtractText`.
+- `PdfDocument.Search` / `PdfPage.Search` (across words and lines, case-insensitive).
+- `PdfPage.GetImages` → `ExtractedImage` (JPEG/JPEG 2000 as stored; Flate/LZW/RunLength images in
+  Gray/RGB/CMYK/Indexed/ICCBased/Separation, 1–16 bit, /Decode, image masks and soft masks → PNG).
+- `PdfPage.ExtractTables` → `ExtractedTable` (lattice: ruled grids with merged cells; stream:
+  column-aligned text with continuation lines) with `ToCsv` and `ToJson`.
+- `PdfTextConverter.ToText` / `ToHtml` (headings, paragraphs, bold/italic, tables).
+- `PdfRedactor.Redact` / `RedactText`: glyphs, images, vector shapes, form XObject content and
+  annotations inside the area are removed from the file; metadata and bookmarks are scrubbed.
+- `PdfRect` (top-left rectangle used by extraction and redaction).
+- `tools/validate_pdf.py --forbid-text` (redaction check with pypdf, PDFium and the raw bytes).
+
 ## [0.7.0] — Phase 6: Open & edit existing PDFs, performance
 
 ### Added

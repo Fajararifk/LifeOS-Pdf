@@ -79,22 +79,45 @@ namespace LifeOS.Pdf.Parsing
             }
 
             var contents = new List<PdfObject>();
-            foreach (var c in ContentParts(sp))
+            var replaced = page.ContentOverride;
+            if (replaced != null)
             {
-                var copied = _copier.Copy(parser, c);
-                if (copied is PdfReference)
+                // Redacted content: only the rewritten stream is written; the original is not copied.
+                var stream = _new();
+                stream.Value = DocumentWriter.ContentStream(replaced.Content, _options);
+                contents.Add(stream.Reference);
+            }
+            else
+            {
+                foreach (var c in ContentParts(sp))
                 {
-                    contents.Add(copied);
+                    var copied = _copier.Copy(parser, c);
+                    if (copied is PdfReference)
+                    {
+                        contents.Add(copied);
+                    }
                 }
             }
 
             PdfObject? copiedResources;
-            if (page.HasNewContent || page.Fonts.Count > 0 || page.Images.Count > 0 || page.Forms.Count > 0)
+            var drawn = page.HasNewContent || page.Fonts.Count > 0 || page.Images.Count > 0 || page.Forms.Count > 0;
+            if (replaced != null && !drawn)
+            {
+                var merged = MergeResources(parser, sp.Resources, out var xobjects, replaced);
+                Replace(parser, xobjects, replaced);
+                copiedResources = merged;
+            }
+            else if (drawn)
             {
                 // New drawing goes into form XObjects of its own: their resource names cannot clash with
                 // the original ones, and q … Q around the old content keeps its graphics state from leaking.
                 var pageResources = resources.For(page);
-                var merged = MergeResources(parser, sp.Resources, out var xobjects);
+                var merged = MergeResources(parser, sp.Resources, out var xobjects, replaced);
+                if (replaced != null)
+                {
+                    Replace(parser, xobjects, replaced);
+                }
+
                 copiedResources = merged;
                 string AddForm(string baseName, byte[] content)
                 {
@@ -169,6 +192,7 @@ namespace LifeOS.Pdf.Parsing
                 dict.Set("Contents", new PdfArray(contents.ToArray()));
             }
 
+            _removedAnnotations = page.RemovedAnnotations;
             var annots = Annotations(sp);
             if (annots.Items.Count > 0)
             {
@@ -176,6 +200,24 @@ namespace LifeOS.Pdf.Parsing
             }
 
             return dict;
+        }
+
+        private HashSet<int>? _removedAnnotations;
+
+        /// <summary>Applies redaction replacements to a page's (copied) XObject dictionary.</summary>
+        private void Replace(PdfParser parser, PdfDictionary xobjects, Extraction.Engine.ContentOverride replaced)
+        {
+            foreach (var pair in replaced.XObjects)
+            {
+                if (pair.Value == null)
+                {
+                    xobjects.Remove(pair.Key);
+                }
+                else
+                {
+                    xobjects.Set(pair.Key, _copier.Copy(parser, pair.Value));
+                }
+            }
         }
 
         private static PdfArray Box(double[] b) => PdfArray.OfNumbers(b[0], b[1], b[2], b[3]);
@@ -205,7 +247,7 @@ namespace LifeOS.Pdf.Parsing
         }
 
         /// <summary>A direct copy of the page resources whose /XObject dictionary can take one more entry.</summary>
-        private PdfDictionary MergeResources(PdfParser parser, PdfObject? source, out PdfDictionary xobjects)
+        private PdfDictionary MergeResources(PdfParser parser, PdfObject? source, out PdfDictionary xobjects, Extraction.Engine.ContentOverride? replaced = null)
         {
             var merged = new PdfDictionary();
             xobjects = new PdfDictionary();
@@ -219,6 +261,11 @@ namespace LifeOS.Pdf.Parsing
                         {
                             foreach (var x in xo.Entries)
                             {
+                                if (replaced != null && replaced.XObjects.ContainsKey(x.Key))
+                                {
+                                    continue; // redacted: the original must not be copied at all
+                                }
+
                                 var v = _copier.Copy(parser, x.Value);
                                 if (!(v is PdfNull))
                                 {
@@ -259,6 +306,11 @@ namespace LifeOS.Pdf.Parsing
                 }
 
                 var number = item is PdfSourceReference r ? r.Number : -1;
+                if (number > 0 && _removedAnnotations != null && _removedAnnotations.Contains(number))
+                {
+                    continue; // removed by redaction
+                }
+
                 var clean = new PdfDictionary();
                 foreach (var e in annot.Entries)
                 {

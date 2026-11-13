@@ -72,6 +72,9 @@ namespace LifeOS.Pdf.Samples
 
             // Opening and editing existing PDFs (Fase 6).
             ManipulationSample.Run(outputDir);
+
+            // Reading content back: text, tables, images, HTML, redaction (Fase 7).
+            ExtractionSample.Run(outputDir);
             return 0;
         }
 

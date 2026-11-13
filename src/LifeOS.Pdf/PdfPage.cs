@@ -52,15 +52,121 @@ namespace LifeOS.Pdf
         public bool IsImported => Source != null;
 
         /// <summary>The page this one was read from, or null for a page created here.</summary>
-        internal Parsing.SourcePage? Source { get; }
+        internal Parsing.SourcePage? Source { get; private set; }
 
         /// <summary>Lower-left corner of the media box (non-zero only for some imported pages).</summary>
-        internal double OriginX { get; }
+        internal double OriginX { get; private set; }
 
-        internal double OriginY { get; }
+        internal double OriginY { get; private set; }
 
         /// <summary>An imported page with nothing added: it can be copied or drawn as it is in the file.</summary>
-        internal bool IsPristine => Source != null && Graphics.ContentLength == 0 && Annotations.Count == 0;
+        internal bool IsPristine => Source != null && Graphics.ContentLength == 0 && Annotations.Count == 0 && ContentOverride == null && RemovedAnnotations.Count == 0;
+
+        /// <summary>Rewritten content of an imported page (redaction) and the XObjects it replaces (null = removed).</summary>
+        internal Extraction.Engine.ContentOverride? ContentOverride { get; set; }
+
+        /// <summary>Annotations of the source page that are not copied (object numbers; redaction).</summary>
+        internal HashSet<int> RemovedAnnotations { get; } = new HashSet<int>();
+
+        /// <summary>
+        /// Makes this page a copy of <paramref name="saved"/> (the same page in a saved snapshot): used before
+        /// rewriting content, so that drawing added in memory is part of what gets rewritten.
+        /// </summary>
+        internal void AdoptSource(PdfPage saved)
+        {
+            Source = saved.Source;
+            OriginX = saved.OriginX;
+            OriginY = saved.OriginY;
+            Graphics.Clear();
+            Fonts.Clear();
+            Images.Clear();
+            Forms.Clear();
+            GraphicsStates.Clear();
+            Annotations.Clear();
+            ContentOverride = null;
+            RemovedAnnotations.Clear();
+            ExtractionCache = null;
+        }
+
+        // ------------------------------------------------------------------ extraction (Fase 7)
+
+        internal Extraction.Engine.PageAnalysis? ExtractionCache { get; set; }
+
+        internal int ExtractionRotation { get; set; }
+
+        /// <summary>
+        /// The page text in reading order (lines top to bottom; see <see cref="Extraction.TextExtractionOptions"/>
+        /// for areas, layout-preserving output and column detection).
+        /// </summary>
+        public string ExtractText(Extraction.TextExtractionOptions? options = null)
+        {
+            var lines = GetTextLines(options);
+            return Extraction.Engine.TextAssembler.Text(new List<Extraction.TextLine>(lines), options?.Layout ?? false);
+        }
+
+        /// <summary>Lines of text in reading order, with their words and positions (page as displayed, top-left origin).</summary>
+        public IReadOnlyList<Extraction.TextLine> GetTextLines(Extraction.TextExtractionOptions? options = null)
+        {
+            var analysis = Extraction.Engine.Analyzer.For(this);
+            if (options == null)
+            {
+                return analysis.Lines;
+            }
+
+            return Extraction.Engine.TextAssembler.Lines(analysis.Glyphs, options.Area, options.IncludeInvisibleText, options.DetectColumns);
+        }
+
+        /// <summary>All words in reading order.</summary>
+        public IReadOnlyList<Extraction.TextWord> GetWords(Extraction.TextExtractionOptions? options = null)
+        {
+            var words = new List<Extraction.TextWord>();
+            foreach (var line in GetTextLines(options))
+            {
+                words.AddRange(line.Words);
+            }
+
+            return words;
+        }
+
+        /// <summary>Images drawn on the page (XObjects inside forms included; inline images too), in drawing order.</summary>
+        public IReadOnlyList<Extraction.ExtractedImage> GetImages()
+        {
+            var analysis = Extraction.Engine.Analyzer.For(this);
+            var images = new List<Extraction.ExtractedImage>();
+            foreach (var (info, bounds) in analysis.Images)
+            {
+                images.Add(new Extraction.ExtractedImage(info, bounds, analysis.Parser));
+            }
+
+            return images;
+        }
+
+        /// <summary>Tables on the page (ruled grids and text aligned in columns), top to bottom.</summary>
+        public IReadOnlyList<Extraction.ExtractedTable> ExtractTables(Extraction.TableExtractionOptions? options = null) =>
+            Extraction.Engine.TableDetector.Find(Extraction.Engine.Analyzer.For(this), options ?? new Extraction.TableExtractionOptions());
+
+        /// <summary>Every glyph in the order the page draws them.</summary>
+        public IReadOnlyList<Extraction.TextGlyph> GetGlyphs() => Extraction.Engine.Analyzer.For(this).Glyphs;
+
+        /// <summary>Finds <paramref name="text"/> on this page (whitespace in the query matches any space or line break).</summary>
+        public IReadOnlyList<Extraction.SearchResult> Search(string text, bool ignoreCase = true)
+        {
+            if (text == null)
+            {
+                throw new ArgumentNullException(nameof(text));
+            }
+
+            var index = 0;
+            for (var i = 0; i < _document.Pages.Count; i++)
+            {
+                if (ReferenceEquals(_document.Pages[i], this))
+                {
+                    index = i;
+                }
+            }
+
+            return Extraction.Engine.TextSearch.Find(Extraction.Engine.Analyzer.For(this).Lines, index, text, ignoreCase);
+        }
 
         /// <summary>True when something was drawn on the page through <see cref="Graphics"/>.</summary>
         internal bool HasNewContent => Graphics.ContentLength > 0;

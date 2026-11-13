@@ -38,8 +38,8 @@ fonts need no font files; for TrueType fonts you ship the `.ttf` with your app.
 | 4 | QR codes & barcodes (vector, PNG, SVG), QRIS | ✅ v0.5 |
 | 5 | Links, bookmarks, table of contents, attachments, annotations | ✅ v0.6 |
 | 6 | Open existing PDFs: merge, split, watermark, page numbers, n-up, compress | ✅ v0.7 |
-| 7 | Extract text, images and tables (CSV) | next |
-| 8 | Forms: create, fill, flatten | planned |
+| 7 | Extract text, images and tables (CSV/JSON), search, PDF → HTML, true redaction | ✅ v0.8 |
+| 8 | Forms: create, fill, flatten | next |
 | 9 | Encryption & digital signatures | planned |
 | 10 | Render to images, read QR/barcodes, OCR (separate packages) | planned |
 | 11 | HTML → PDF (wkhtmltopdf & Chromium, separate package) | planned |
@@ -252,6 +252,37 @@ The parser handles cross-reference streams, object streams, incremental updates 
 files (the cross-reference is rebuilt), and is safe on untrusted input: nesting, stream size,
 object count and page count are limited (`PdfReadOptions`), and scripts in copied
 annotations are dropped. Encrypted files are reported with `PdfEncryptedException`.
+
+### Extract text, tables and images · search · redact
+
+```csharp
+using LifeOS.Pdf.Extraction;
+
+var doc = PdfDocument.Open("mutasi-rekening.pdf");
+string text = doc.ExtractText();                                         // reading order, pages split by \f
+string grid = doc.Pages[0].ExtractText(new TextExtractionOptions { Layout = true });
+foreach (var word in doc.Pages[0].GetWords())                            // text + box + font
+    Console.WriteLine($"{word.Text} {word.Bounds} {word.FontName} {word.FontSize}");
+
+foreach (var table in doc.Pages[0].ExtractTables())                      // ruled or column-aligned
+    File.WriteAllText("table.csv", table.ToCsv());                       // also ToJson()
+
+foreach (var image in doc.Pages[0].GetImages())                          // JPEG as is, others → PNG
+    image.Save("images/" + image.Name);
+
+var hits = doc.Search("Rp1.924.500");                                    // page + rectangles
+File.WriteAllText("doc.html", PdfTextConverter.ToHtml(doc));
+
+PdfRedactor.RedactText(doc, "3174012345678901");                         // removed from the file, not just covered
+PdfRedactor.Redact(doc.Pages[0], new PdfRect(400, 520, 140, 140));       // an area (e.g. a QR code)
+doc.Save("redacted.pdf");
+```
+
+Fonts are decoded through ToUnicode CMaps, encodings with /Differences and the Adobe Glyph List,
+and CID fonts. Positions are in points with the origin at the top-left of the page as displayed.
+Redaction removes glyphs (the rest of the line stays in place), images, vector shapes and
+annotations inside the area, rewrites form XObjects, and scrubs the text from metadata and
+bookmarks; it is verified with pypdf, PDFium and zxing in CI.
 
 ### Images → PDF
 

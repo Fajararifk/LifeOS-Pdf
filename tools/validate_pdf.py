@@ -146,7 +146,8 @@ def check_navigation(reader: "pypdf.PdfReader", outlines: list[str], links: list
 
 
 def validate(path: str, expected_texts: list[str], render_dir: str | None = None, expected_codes: list[str] | None = None,
-             outlines: list[str] | None = None, links: list[str] | None = None, attachments: list[str] | None = None) -> list[str]:
+             outlines: list[str] | None = None, links: list[str] | None = None, attachments: list[str] | None = None,
+             forbidden: list[str] | None = None) -> list[str]:
     problems: list[str] = []
 
     with pikepdf.open(path) as pdf:
@@ -164,6 +165,20 @@ def validate(path: str, expected_texts: list[str], render_dir: str | None = None
     for expected in expected_texts:
         if expected not in text:
             problems.append(f"expected text not found: {expected!r}")
+
+    # Redaction check: neither pypdf nor PDFium may find the text, and it must not be in the file.
+    if forbidden:
+        import pypdfium2
+        pdfium_text = ""
+        doc = pypdfium2.PdfDocument(path)
+        for i in range(len(doc)):
+            pdfium_text += doc[i].get_textpage().get_text_range() + "\n"
+        raw = open(path, "rb").read()
+        for word in forbidden:
+            if word in text or word in pdfium_text:
+                problems.append(f"forbidden text is still extractable: {word!r}")
+            if word.encode("latin-1", "ignore") in raw:
+                problems.append(f"forbidden text is still in the file bytes: {word!r}")
 
     problems.extend(check_navigation(reader, outlines or [], links or [], attachments or []))
     problems.extend(render(path, render_dir))
@@ -189,12 +204,13 @@ def main() -> int:
     parser.add_argument("--expect-outline", action="append", default=[], help="bookmark title that must exist")
     parser.add_argument("--expect-link", action="append", default=[], help="URI of a link annotation that must exist")
     parser.add_argument("--expect-attachment", action="append", default=[], help="name of an embedded file that must exist")
+    parser.add_argument("--forbid-text", action="append", default=[], help="text that must NOT be extractable (redaction check)")
     args = parser.parse_args()
 
     failed = False
     for f in args.files:
         for p in validate(f, args.expect_text, args.render_dir, args.expect_code,
-                          args.expect_outline, args.expect_link, args.expect_attachment):
+                          args.expect_outline, args.expect_link, args.expect_attachment, args.forbid_text):
             failed = True
             print("  - " + p)
     return 1 if failed else 0

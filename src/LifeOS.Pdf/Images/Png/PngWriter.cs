@@ -16,14 +16,17 @@ namespace LifeOS.Pdf.Images.Png
         /// <param name="height">Height in pixels.</param>
         /// <param name="rgb">Pixels, row by row, 3 bytes (R, G, B) each.</param>
         /// <param name="dpi">Resolution stored in the pHYs chunk (0 = none).</param>
-        public static byte[] WriteRgb(int width, int height, byte[] rgb, double dpi = 0)
+        public static byte[] WriteRgb(int width, int height, byte[] rgb, double dpi = 0) => Write(width, height, rgb, 3, dpi);
+
+        /// <summary>8-bit PNG with 1 (gray), 2 (gray + alpha), 3 (RGB) or 4 (RGBA) channels.</summary>
+        public static byte[] Write(int width, int height, byte[] rgb, int channels, double dpi = 0)
         {
-            if (width <= 0 || height <= 0 || rgb.Length != (long)width * height * 3)
+            if (width <= 0 || height <= 0 || channels < 1 || channels > 4 || rgb.Length != (long)width * height * channels)
             {
                 throw new ArgumentException("Pixel data does not match the image size.");
             }
 
-            var rowBytes = width * 3;
+            var rowBytes = width * channels;
             var raw = new byte[(rowBytes + 1) * height];
             for (var y = 0; y < height; y++)
             {
@@ -38,7 +41,7 @@ namespace LifeOS.Pdf.Images.Png
                 WriteU32(ihdr, 0, (uint)width);
                 WriteU32(ihdr, 4, (uint)height);
                 ihdr[8] = 8;  // bit depth
-                ihdr[9] = 2;  // color type: RGB
+                ihdr[9] = channels == 1 ? (byte)0 : channels == 2 ? (byte)4 : channels == 3 ? (byte)2 : (byte)6; // gray, gray+alpha, RGB, RGBA
                 WriteChunk(ms, "IHDR", ihdr);
                 if (dpi > 0)
                 {

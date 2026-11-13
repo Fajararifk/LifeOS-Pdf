@@ -19,6 +19,7 @@
   <ItemGroup>
     <!-- Built-in report templates, loaded by BuiltInTemplates. -->
     <EmbeddedResource Include="Templates\Resources\*.xml" LogicalName="LifeOS.Pdf.Templates.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Extraction/Engine/Resources/glyphlist.txt.gz" LogicalName="LifeOS.Pdf.glyphlist.txt.gz" />
   </ItemGroup>
 
 </Project>

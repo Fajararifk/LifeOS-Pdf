@@ -292,6 +292,36 @@ namespace LifeOS.Pdf
             }
         }
 
+        /// <summary>Text of all pages in reading order; pages are separated by a form feed ('\f').</summary>
+        public string ExtractText(Extraction.TextExtractionOptions? options = null)
+        {
+            var parts = new List<string>();
+            foreach (var page in Extraction.Engine.Analyzer.Pages(this))
+            {
+                parts.Add(page.ExtractText(options));
+            }
+
+            return string.Join("\f", parts);
+        }
+
+        /// <summary>Finds <paramref name="text"/> on every page.</summary>
+        public IReadOnlyList<Extraction.SearchResult> Search(string text, bool ignoreCase = true)
+        {
+            if (text == null)
+            {
+                throw new ArgumentNullException(nameof(text));
+            }
+
+            var results = new List<Extraction.SearchResult>();
+            var pages = Extraction.Engine.Analyzer.Pages(this);
+            for (var i = 0; i < pages.Count; i++)
+            {
+                results.AddRange(Extraction.Engine.TextSearch.Find(Extraction.Engine.Analyzer.For(pages[i]).Lines, i, text, ignoreCase));
+            }
+
+            return results;
+        }
+
         /// <summary>Writes the document to a file, replacing it if it exists.</summary>
         public void Save(string path, PdfSaveOptions? options = null)
         {

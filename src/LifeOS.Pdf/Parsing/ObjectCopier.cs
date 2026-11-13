@@ -40,11 +40,17 @@ namespace LifeOS.Pdf.Parsing
             while (_queue.Count > 0)
             {
                 var (target, parser, source) = _queue.Dequeue();
-                target.Value = CopyDirect(parser, source, 0);
+                target.Value = CopyDirect(parser, source, 0, true);
             }
         }
 
-        private PdfObject CopyDirect(PdfParser parser, PdfObject? value, int depth)
+        private PdfObject CopyDirect(PdfParser parser, PdfObject? value, int depth) => CopyDirect(parser, value, depth, false);
+
+        /// <summary>
+        /// Copies a value. A stream that is not the whole value of an indirect object (a stream built in
+        /// memory, e.g. a redacted form) gets an indirect object of its own: streams cannot be direct.
+        /// </summary>
+        private PdfObject CopyDirect(PdfParser parser, PdfObject? value, int depth, bool streamAllowed)
         {
             if (depth > 512)
             {
@@ -65,8 +71,12 @@ namespace LifeOS.Pdf.Parsing
                     }
 
                     return a;
-                case PdfStream stream:
+                case PdfStream stream when streamAllowed:
                     return CopyStream(parser, stream, depth);
+                case PdfStream stream:
+                    var holder = _newObject();
+                    holder.Value = CopyStream(parser, stream, depth);
+                    return holder.Reference;
                 case PdfDictionary dict:
                     var d = new PdfDictionary();
                     foreach (var e in dict.Entries)
@@ -93,7 +103,7 @@ namespace LifeOS.Pdf.Parsing
                 _copied[(parser, number)] = target;
             }
 
-            target.Value = CopyDirect(parser, replacement, 0);
+            target.Value = CopyDirect(parser, replacement, 0, true);
             return target.Reference;
         }
 

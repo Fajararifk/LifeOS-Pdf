@@ -79,7 +79,7 @@ parser (merge, ekstrak, form) menyusul, lalu integrasi engine eksternal di akhir
 | QR & barcode (buat) | – | ✓ | ✓ | Fase 4 ✅ |
 | Link, bookmark, lampiran | ✓ | ✓ | ✓ | Fase 5 ✅ |
 | Buka/merge/split/watermark/kompres | ✓ | ✓ | ✓ | Fase 6 ✅ |
-| Ekstrak teks/gambar/tabel, redaksi | – | ✓ | ✓ | Fase 7 |
+| Ekstrak teks/gambar/tabel, redaksi | – | ✓ | ✓ | Fase 7 ✅ |
 | Form (AcroForm) | sebagian | ✓ | ✓ | Fase 8 |
 | Enkripsi & tanda tangan digital | sebagian | ✓ | ✓ | Fase 9 |
 | Render, scan QR/barcode, OCR | – | add-on | ✓ | Fase 10 (integrasi) |
@@ -164,7 +164,9 @@ SPESIFIKASI:
 - Import halaman sebagai Form XObject (n-up, booklet, background/kop surat).
 - Kompres/optimasi: hapus objek tak terpakai, kompres ulang stream, downscale gambar.
 
-## FASE 7 — Ekstraksi Konten (v0.8)  · use case 4, 5
+## FASE 7 — Ekstraksi Konten ✅ (v0.8)  · use case 4, 5
+Selesai (teks + posisi + font, urutan baca, cari, gambar, tabel → CSV/JSON, PDF → teks/HTML,
+redaksi sungguhan). Lihat design-fase7.md & qa-fase7.md.
 SPESIFIKASI:
 - Interpreter content stream: teks + posisi + font, urutan baca, per area.
 - Cari teks, ekstrak gambar (JPEG apa adanya, lainnya → PNG).

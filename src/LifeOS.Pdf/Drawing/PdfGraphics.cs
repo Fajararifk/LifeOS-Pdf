@@ -40,6 +40,14 @@ namespace LifeOS.Pdf.Drawing
 
         internal string Content => _main.ToString();
 
+        /// <summary>Forgets everything drawn (the page's content was replaced by a saved copy).</summary>
+        internal void Clear()
+        {
+            _main.Clear();
+            _underlay.Clear();
+            Depth = 0;
+        }
+
         /// <summary>Drawing that goes on top of the page (for new pages: everything after the underlay).</summary>
         internal byte[] ContentBytes() => Bytes(_main);
 

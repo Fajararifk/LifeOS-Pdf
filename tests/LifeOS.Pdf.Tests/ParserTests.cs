@@ -273,6 +273,21 @@ namespace LifeOS.Pdf.Tests
                 {
                     var doc = PdfDocument.Open(data, new PdfReadOptions { MaxStreamSize = 8 * 1024 * 1024 });
                     doc.ToArray();
+                    foreach (var page in doc.Pages)
+                    {
+                        page.ExtractText();
+                        page.ExtractTables();
+                        foreach (var image in page.GetImages())
+                        {
+                            try
+                            {
+                                image.GetBytes();
+                            }
+                            catch (PdfReadException)
+                            {
+                            }
+                        }
+                    }
                 }
                 catch (PdfReadException)
                 {
