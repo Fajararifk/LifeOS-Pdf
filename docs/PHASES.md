@@ -57,12 +57,14 @@ nol tidak realistis (browser engine, OCR).
 | 2 | PDF dari kode C# (layout, tabel, gambar, header/footer) | 0 ✅ + 1 ✅ + 2 ✅ | Dari nol |
 | 3 | Membuat PDF + manipulasi dasar | 0 ✅ + 6 | Dari nol |
 | 4 | Buat, ekstrak teks, merge, split, isi form, enkripsi | 6, 7, 8, 9 | Dari nol |
-| 5 | Membuat & convert PDF (gambar↔PDF, PDF→teks/CSV, PDF/A) | 1 ✅ (gambar→PDF), 7, 10, 12 | Dari nol + integrasi render |
+| 5 | Membuat & convert PDF (gambar↔PDF, PDF→teks/CSV, PDF/A) | 1 ✅ (gambar→PDF), 7 ✅, 10, 14 | Dari nol + integrasi render |
 | 6 | Laporan PDF dari template | 3 ✅ | Dari nol |
 | 7 | Gambar QR untuk ditempel ke PDF | 4 ✅ | Dari nol (vektor di PDF + PNG/SVG) |
 | 8 | Baca QR/barcode dari gambar | 10 | Integrasi: ZXing.Net (Apache-2.0) |
 | 9 | Ambil teks dari PDF hasil scan (OCR) | 10 | Integrasi: Tesseract (Apache-2.0) |
 | 10 | Baca barcode/QR + OCR dari PDF | 10 | Render PDFium → ZXing + Tesseract |
+| 11 | Excel/CSV, Word, PowerPoint → PDF; template Word (mail merge) | 12 | Dari nol: `LifeOS.Pdf.Office` (OOXML = zip + XML) |
+| 12 | Grafik di laporan, Markdown → PDF, tabel PDF → Excel | 13 | Dari nol |
 
 Urutan sengaja mendahulukan **laporan** (fase 1–4): itu kebutuhan paling sering
 (termasuk export PDF dari LifeOS), dan semuanya bisa dari nol. Fitur yang butuh
@@ -84,7 +86,9 @@ parser (merge, ekstrak, form) menyusul, lalu integrasi engine eksternal di akhir
 | Enkripsi & tanda tangan digital | sebagian | ✓ | ✓ | Fase 9 |
 | Render, scan QR/barcode, OCR | – | add-on | ✓ | Fase 10 (integrasi) |
 | HTML → PDF | – | pdfHTML | ✓ | Fase 11 (integrasi) |
-| PDF/A, PDF/UA, layer, gradien | sebagian | ✓ | sebagian | Fase 12 |
+| Office (Excel/Word/PowerPoint) → PDF | – | sebagian | ✓ | Fase 12 |
+| Grafik, Markdown → PDF, PDF → Excel | – | – | sebagian | Fase 13 |
+| PDF/A, PDF/UA, layer, gradien | sebagian | ✓ | sebagian | Fase 14 |
 
 ---
 
@@ -209,7 +213,38 @@ SPESIFIKASI:
 - Opsi: ukuran kertas, margin, header/footer HTML, orientasi, skala, timeout.
 - Hasil HTML bisa digabung dengan dokumen LifeOS.Pdf (merge Fase 6, stamp).
 
-## FASE 12 — Standar & Grafis Lanjut (v1.3)  · use case 5
+## FASE 12 — Office → PDF (v1.3)  · use case 11
+Package terpisah `LifeOS.Pdf.Office`, ditulis dari nol berdasarkan ECMA-376 (OOXML): file Office =
+zip berisi XML, cukup `System.IO.Compression` — tanpa dependency. Kode dari library lain hanya
+boleh dipelajari bila lisensinya MIT/Apache (CLAUDE.md #6).
+SPESIFIKASI:
+- API: `OfficeToPdf.Convert(path | Stream, outputPath | Stream)`, `Convert(...) → byte[]`,
+  `OfficeConversionOptions` (pilih sheet per nama/indeks, ukuran kertas, orientasi, skala, margin).
+- **Excel .xlsx + CSV** (tahap 1): nilai sel & format angka/tanggal (termasuk Rupiah), lebar kolom,
+  tinggi baris, sel gabungan, font/bold/warna/border/isian, area cetak, orientasi & fit-to-page,
+  baris judul berulang, header/footer, satu sheet = satu bagian PDF (bookmark per sheet). Rumus
+  memakai nilai tersimpan (cached value). CSV: RFC 4180, pemisah koma/titik koma, UTF-8/BOM.
+- **Word .docx** (tahap 2): paragraf & style, heading, list, tabel, gambar, header/footer, nomor
+  halaman, page break, section (orientasi), hyperlink & bookmark → dipetakan ke layout engine Fase 2.
+  Target: mirip, bukan identik piksel dengan Word.
+- **PowerPoint .pptx** (tahap 3): satu slide = satu halaman; kotak teks, gambar, bentuk dasar,
+  warna/font tema, latar slide, catatan (opsional). Tidak: animasi, SmartArt, chart, video.
+- **Template Word (mail merge)**: dokumen .docx dengan `{{Nama}}`, `{{Total|rupiah}}`, baris tabel
+  berulang dan blok kondisi → diisi data C#/JSON (mesin ekspresi Fase 3) → PDF; batch 1 template ×
+  banyak data → banyak PDF atau satu PDF gabungan.
+- Model data sederhana (`Workbook`/`Sheet`/`Cell`) supaya data bisa diubah di kode sebelum disimpan
+  ke PDF (dan disimpan balik ke CSV/xlsx). Edit visual seperti Excel di luar scope.
+
+## FASE 13 — Grafik, Markdown & Export Excel (v1.4)  · use case 12
+SPESIFIKASI:
+- **Grafik vektor**: bar, stacked bar, line, area, pie, donut, sparkline di layout engine
+  (`section.AddChart`) dan template (`<chart>`); sumbu, legenda, label nilai, format Rupiah, warna tema.
+- **Markdown → PDF**: CommonMark dasar (heading, paragraf, list, tabel GFM, kode, kutipan, gambar,
+  link) di atas layout engine; daftar isi otomatis dari heading.
+- **PDF → Excel (.xlsx)**: tabel hasil ekstraksi Fase 7 (mutasi rekening, invoice) ditulis sebagai
+  xlsx (angka & tanggal dikenali, satu tabel per sheet); writer OOXML dipakai bersama Fase 12.
+
+## FASE 14 — Standar & Grafis Lanjut (v1.5)  · use case 5
 SPESIFIKASI:
 - Transparansi/blend mode, clipping, gradien (axial/radial), pattern, layer (OCG).
 - XMP metadata, convert ke PDF/A-2b/3b (validasi veraPDF), tagged PDF / PDF/UA dasar.
@@ -219,9 +254,10 @@ SPESIFIKASI:
 
 ## Backlog fitur lain (belum dijadwalkan)
 - Bandingkan dua PDF (teks & visual) dan tandai perbedaannya.
-- Export tabel PDF ke Excel (.xlsx) — butuh writer OOXML (package terpisah).
+- Dokumen terverifikasi: QR berisi hash + tanda tangan isi dokumen; scan untuk cek keaslian
+  (setelah Fase 9).
+- Decoder/encoder JPEG dari nol: downscale gambar (kompres PDF scan), thumbnail tanpa PDFium.
 - Ekstraksi data invoice/struk berbasis template zona.
 - Kompres PDF hasil scan (JBIG2/CCITT G4 untuk dokumen hitam-putih).
-- Mail merge: satu template × banyak data → banyak PDF / satu PDF gabungan.
 - CLI `lifeos-pdf` (merge, split, compress, ocr, html2pdf) di atas semua package.
 - Contoh integrasi ASP.NET Core (return PDF dari endpoint) dan Blazor.

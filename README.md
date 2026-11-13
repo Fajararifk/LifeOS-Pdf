@@ -43,7 +43,9 @@ fonts need no font files; for TrueType fonts you ship the `.ttf` with your app.
 | 9 | Encryption & digital signatures | planned |
 | 10 | Render to images, read QR/barcodes, OCR (separate packages) | planned |
 | 11 | HTML → PDF (wkhtmltopdf & Chromium, separate package) | planned |
-| 12 | PDF/A, PDF/UA, gradients, layers, e-invoicing | planned |
+| 12 | Office → PDF: Excel/CSV, Word, PowerPoint; Word templates (mail merge) — separate package | planned |
+| 13 | Vector charts, Markdown → PDF, PDF tables → Excel | planned |
+| 14 | PDF/A, PDF/UA, gradients, layers, e-invoicing | planned |
 
 The full roadmap and use-case mapping is in [docs/PHASES.md](docs/PHASES.md).
 
