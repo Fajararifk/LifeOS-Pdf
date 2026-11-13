@@ -106,9 +106,10 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [test, runtimes]
     runs-on: ubuntu-latest
-    env:
-      # Empty when the secret is not configured; the push step is then skipped.
-      NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+    environment: production
+    permissions:
+      contents: read
+      id-token: write   # wajib untuk Trusted Publishing
     steps:
       - uses: actions/checkout@v4
 
@@ -124,6 +125,11 @@ jobs:
           name: nuget
           path: artifacts/*.nupkg
 
+      - name: NuGet login (OIDC)
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: fajararifk
+
       - name: Push to NuGet.org
-        if: ${{ env.NUGET_API_KEY != '' }}
-        run: dotnet nuget push "artifacts/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push "artifacts/*.nupkg" --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
