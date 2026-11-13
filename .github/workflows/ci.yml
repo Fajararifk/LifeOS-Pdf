@@ -23,12 +23,18 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
+            5.0.x
+            6.0.x
+            7.0.x
             8.0.x
             9.0.x
             10.0.x
 
+      - name: Restore
+        run: dotnet restore
+
       - name: Build (netstandard2.0, net5.0 – net10.0)
-        run: dotnet build -c Release
+        run: dotnet build -c Release --no-restore
 
       - name: Unit tests (net8.0, net9.0, net10.0)
         run: dotnet test -c Release --no-build --logger "console;verbosity=normal"
