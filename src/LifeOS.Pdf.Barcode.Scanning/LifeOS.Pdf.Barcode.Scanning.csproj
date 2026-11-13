@@ -4,9 +4,10 @@
     <TargetFrameworks>$(LifeOsLibraryTargets)</TargetFrameworks>
     <RootNamespace>LifeOS.Pdf.Barcode.Scanning</RootNamespace>
     <PackageId>LifeOS.Pdf.Barcode.Scanning</PackageId>
-    <Description>Read QR codes and barcodes (ZXing.Net) from images and PDF documents.</Description>
+    <Description>Read QR codes and barcodes (zxing-cpp) from images and PDF documents.</Description>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,6 +16,11 @@
 
   <ItemGroup>
     <PackageReference Include="ZXingCpp" Version="0.5.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\THIRD_PARTY_NOTICES.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

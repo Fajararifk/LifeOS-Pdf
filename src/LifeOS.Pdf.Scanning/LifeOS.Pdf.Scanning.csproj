@@ -7,6 +7,7 @@
     <Description>Combined render + barcode + OCR pipeline for scanned PDFs.</Description>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,6 +15,11 @@
     <ProjectReference Include="..\LifeOS.Pdf.Rendering\LifeOS.Pdf.Rendering.csproj" />
     <ProjectReference Include="..\LifeOS.Pdf.Barcode.Scanning\LifeOS.Pdf.Barcode.Scanning.csproj" />
     <ProjectReference Include="..\LifeOS.Pdf.Ocr\LifeOS.Pdf.Ocr.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\THIRD_PARTY_NOTICES.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

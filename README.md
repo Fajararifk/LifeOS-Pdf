@@ -1,13 +1,15 @@
 # LifeOS.Pdf
 
-An open-source PDF library for .NET, **written from scratch** in C# with no
-dependencies. Runs on **.NET Standard 2.0 and .NET 5, 6, 7, 8, 9 and 10**
-(and .NET Framework 4.6.1+ through netstandard2.0).
+An open-source PDF library for .NET, **written from scratch** in C#. The **core
+package has no dependencies** and runs on **.NET Standard 2.0 and .NET 5, 6, 7,
+8, 9 and 10** (and .NET Framework 4.6.1+ through netstandard2.0). The optional
+companion packages (digital signatures, rendering, barcode scanning, OCR) are
+published separately and may use native libraries.
 
-Every generated file is validated with qpdf, pypdf and PDFium (the engine behind
-Chrome's PDF viewer), and embedded fonts with fontTools and OTS (the font
-sanitizer used by Chrome and Firefox), so output opens in Chrome, Edge, Firefox,
-Adobe Acrobat and other PDF readers.
+In development, every generated file is validated with qpdf, pypdf and PDFium
+(the engine behind Chrome's PDF viewer), and embedded fonts with fontTools and
+OTS (the font sanitizer used by Chrome and Firefox), so output opens in Chrome,
+Edge, Firefox, Adobe Acrobat and other PDF readers.
 
 <p align="center">
   <img src="docs/images/showcase-p1.png" width="380" alt="Sample page: text in the 14 standard fonts, shapes, JPEG image">
