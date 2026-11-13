@@ -9,9 +9,6 @@ Chrome's PDF viewer), and embedded fonts with fontTools and OTS (the font
 sanitizer used by Chrome and Firefox), so output opens in Chrome, Edge, Firefox,
 Adobe Acrobat and other PDF readers.
 
-**📖 New here? Follow the [step-by-step tutorial](docs/tutorial.md)** — one runnable
-example for every feature, from your first PDF to forms, encryption and scanned documents.
-
 <p align="center">
   <img src="docs/images/showcase-p1.png" width="380" alt="Sample page: text in the 14 standard fonts, shapes, JPEG image">
   <img src="docs/images/showcase-p3.png" width="380" alt="Sample page: embedded Unicode fonts, transparent PNG, rotation and watermark">
@@ -25,15 +22,23 @@ example for every feature, from your first PDF to forms, encryption and scanned 
 dotnet add package LifeOS.Pdf
 ```
 
-Nothing else to install, on a developer machine or a server: the package is
-100% managed code with no native libraries and no `System.Drawing`, so it runs
-on Linux, Windows, macOS, Docker and serverless hosts alike. The 14 standard
-fonts need no font files; for TrueType fonts you ship the `.ttf` with your app.
+The core package is **100% managed code with no dependencies** and needs nothing
+else on a developer machine or a server, so it runs on Linux, Windows, macOS,
+Docker and serverless hosts alike. Optional companion packages (Phase 9–10) are
+installed separately and may use native libraries:
 
-Optional companion packages are published separately and may use native
-libraries: `LifeOS.Pdf.Signing` (CMS/PKCS#7), `LifeOS.Pdf.Rendering` (PDFium),
-`LifeOS.Pdf.Barcode.Scanning` (zxing-cpp), `LifeOS.Pdf.Ocr` (Tesseract) and
-`LifeOS.Pdf.Scanning`. The core package never depends on any of them.
+```bash
+dotnet add package LifeOS.Pdf.Signing          # digital signatures (.NET 8+)
+dotnet add package LifeOS.Pdf.Rendering        # PDF → PNG (PDFium)
+dotnet add package LifeOS.Pdf.Barcode.Scanning # read QR/barcodes (zxing-cpp)
+dotnet add package LifeOS.Pdf.Ocr              # OCR (Tesseract)
+dotnet add package LifeOS.Pdf.Scanning         # render + barcode + OCR
+```
+
+## Usage
+
+Read the **[step-by-step tutorial](docs/tutorial.md)** — one runnable example for every
+feature, from your first PDF to forms, encryption and scanned documents.
 
 ## Status
 
@@ -57,332 +62,6 @@ libraries: `LifeOS.Pdf.Signing` (CMS/PKCS#7), `LifeOS.Pdf.Rendering` (PDFium),
 
 The full roadmap and use-case mapping is in [docs/PHASES.md](docs/PHASES.md).
 
-## Quick start
-
-```csharp
-using LifeOS.Pdf;
-using LifeOS.Pdf.Drawing;
-using LifeOS.Pdf.Fonts;
-using LifeOS.Pdf.Images;
-
-var doc = new PdfDocument();
-doc.Info.Title = "Monthly report";
-
-var page = doc.AddPage(PageSize.A4);
-var g = page.Graphics; // origin (0,0) at the top-left, units in points (1/72 inch)
-
-g.DrawText("Hello world", new PdfFont(StandardFont.HelveticaBold, 24), 72, 72);
-g.DrawTextBox("Long paragraphs are wrapped automatically to the width of the box.",
-    new PdfFont(StandardFont.TimesRoman, 12), 72, 120, width: 300);
-g.DrawRoundedRectangle(new PdfPen(PdfColor.Blue, 1), PdfColor.FromHex("#DBEAFE"), 72, 200, 200, 60, radius: 8);
-g.DrawText("$1,350.00", new PdfFont(StandardFont.Courier, 12), 272, 220, align: TextAlign.Right);
-g.DrawImage(PdfImage.FromFile("photo.jpg"), 72, 300, width: 250); // height keeps the aspect ratio
-
-doc.Save("report.pdf");
-```
-
-### TrueType fonts & Unicode, PNG, watermark
-
-```csharp
-var noto = PdfFontFace.FromFile("NotoSans-Regular.ttf");   // .ttf or .ttc
-g.DrawText("Tiếng Việt · Ελληνικά · Русский · 日本語*", new PdfFont(noto, 12), 72, 400);
-// *as long as the font has the glyphs — check first with noto.HasGlyph("日本語")
-
-g.DrawImage(PdfImage.FromFile("logo.png"), 400, 40, 120);   // transparent PNG
-
-using (g.Save())
-{
-    g.RotateAt(-35, page.Width / 2, page.Height / 2);
-    g.SetOpacity(0.1);
-    g.DrawText("DRAFT", new PdfFont(StandardFont.HelveticaBold, 120), page.Width / 2, page.Height / 2, align: TextAlign.Center);
-}
-```
-
-Fonts are subset automatically (only the glyphs you use are embedded) and text
-stays selectable and searchable in viewers.
-
-### Multi-page reports (layout engine)
-
-No coordinates needed: describe the content, and the library breaks lines,
-creates pages, repeats table headers and fills in "Page X of Y".
-
-```csharp
-using LifeOS.Pdf.Layout;
-
-var doc = new FlowDocument();
-doc.Styles.Normal = new TextStyle { Family = FontFamily.Helvetica, Size = 10,
-    Fallbacks = { FontFamily.FromFiles("NotoSans-Regular.ttf") } };   // for non-Latin characters
-
-var section = doc.AddSection(new PageSetup { PageSize = PageSize.A4 });
-section.Footer.AddParagraph().AddText("Page ").AddPageNumber().AddText(" of ").AddPageCount()
-    .Format.Alignment = ParagraphAlignment.Center;
-
-section.AddHeading("Finance report — November 2026");
-section.AddParagraph()
-    .AddText("Total spending ")
-    .AddText("$7,482.50", new TextStyle { Bold = true })
-    .AddText(", down 12% from last month.");
-
-var table = section.AddTable();
-table.AddColumn(ColumnWidth.Auto);
-table.AddColumn(ColumnWidth.Relative());
-table.AddColumn(ColumnWidth.Fixed(90), ParagraphAlignment.Right);
-table.HeaderRows = 1;                                   // repeated on every page
-table.AlternateRowBackground = PdfColor.FromHex("#F9FAFB");
-table.AddRow("Date", "Note", "Amount");
-foreach (var t in transactions)
-    table.AddRow(t.Date, t.Note, t.Amount);
-
-doc.Save("report.pdf");
-```
-
-Also available: justified text, bulleted/numbered lists, column and row spans,
-images in the flow, multiple columns, keep-with-next, page breaks, a different
-header/footer on the first page. Full example:
-[ReportSample.cs](samples/LifeOS.Pdf.Samples/ReportSample.cs).
-
-### Reports from templates
-
-Keep the layout in an XML template that can be edited without recompiling, and fill it
-with a C# object or JSON. Five templates ship with the library: invoice, receipt
-(*kwitansi*), payslip, monthly finance report and certificate.
-
-```csharp
-using LifeOS.Pdf.Templates;
-
-// Built-in template + JSON data
-BuiltInTemplates.Invoice.Render(TemplateData.FromJson(json)).Save("invoice.pdf");
-
-// Your own template
-var template = PdfTemplate.Load("templates/order.xml");
-template.Render(new { Number = "ORD-17", Customer = customer, Items = items }).Save("order.pdf");
-```
-
-```xml
-<document title="Order {{ Number }}">
-  <section size="A4" margin="20mm">
-    <h1>Order {{ Number }}</h1>
-    <p>For <b>{{ Customer.Name }}</b> · {{ Date | date:"d MMMM yyyy" }}</p>
-    <table headerRows="1" zebra="#F9FAFB">
-      <column width="*"/><column width="auto" align="right"/><column width="90" align="right"/>
-      <row><cell>Item</cell><cell>Qty</cell><cell>Amount</cell></row>
-      <foreach in="Items" as="item">
-        <row><cell>{{ item.Name }}</cell><cell>{{ item.Quantity }}</cell><cell>{{ item.Quantity * item.Price | rupiah }}</cell></row>
-      </foreach>
-    </table>
-    <p align="right"><b>Total {{ Items | sumproduct:"Quantity":"Price" | rupiah }}</b></p>
-  </section>
-</document>
-```
-
-Loops, conditions, variables, grouping and sums, and Indonesian/English formatting of
-money, dates and numbers in words (*terbilang*) are built in. Full reference:
-[docs/templates.md](docs/templates.md).
-
-### QR codes & barcodes
-
-Encoded from scratch and drawn as vectors (sharp at any zoom), or exported as PNG/SVG.
-Every symbol is verified to scan with an independent decoder.
-
-```csharp
-using LifeOS.Pdf.Barcodes;
-
-g.DrawQrCode(QrCode.Encode("https://lifeos.app/inv/42"), 400, 60, size: 100);
-g.DrawQrCode(QrCode.Encode(url, QrErrorCorrection.High), 400, 200, 100, logo: PdfImage.FromFile("logo.png"));
-g.DrawBarcode(Barcode.Code128("INV-2026-0042"), 72, 700, width: 200, height: 50);
-g.DrawBarcode(Barcode.Ean13("899123456789"), 300, 700, 160, 60);    // check digit added
-
-File.WriteAllBytes("qr.png", QrCode.Encode("hello").ToPng(moduleSize: 8));
-
-// QRIS: turn a merchant's static QRIS into a dynamic one for an exact amount
-var payload = Qris.WithAmount(staticQris, 125000);
-```
-
-QR (versions 1–40, error correction L/M/Q/H), Code 128, Code 39, EAN-13, EAN-8, UPC-A,
-ITF and ITF-14. Also available as `section.AddQrCode(...)`/`AddBarcode(...)` in the layout
-engine and as `<qrcode>`/`<barcode>` in templates; the built-in invoice shows a QRIS payment
-code when the data has `PaymentQr`.
-
-### Links, bookmarks, table of contents, attachments
-
-```csharp
-using LifeOS.Pdf.Navigation;
-
-// Layout engine: headings become bookmarks automatically
-var section = doc.AddSection();
-section.AddTableOfContents("Daftar Isi");          // dot leaders, page numbers, clickable
-section.AddHeading("Ringkasan").Anchor = "ringkasan";
-section.AddParagraph("Lihat ").AddLink("situs kami", "https://lifeos.app")
-       .AddText(" atau ").AddLink("ringkasan", "#ringkasan");
-doc.Attachments.Add("data.csv", csvBytes, "text/csv");
-
-// Low level
-page.AddLink(72, 700, 120, 14, "https://lifeos.app");
-page.AddLink(72, 720, 120, 14, PdfDestination.ToPage(pdf.Pages[3], top: 100));
-pdf.Outline.Add("Bab 1", PdfDestination.ToPage(pdf.Pages[0])).Add("1.1", PdfDestination.FitPage(pdf.Pages[1]));
-pdf.PageLabels.Add(0, PageLabelStyle.LowerRoman);   // i, ii, … then 1, 2, …
-pdf.PageLabels.Add(2, PageLabelStyle.Decimal);
-pdf.ViewerPreferences.PageLayout = PageLayout.TwoPageRight;
-
-// Annotations
-page.AddNote(400, 80, "Cek lagi angka ini", author: "Fajar");
-page.AddHighlight(72, 100, 200, 14, comment: "penting");
-page.AddStamp(350, 300, 160, 60, "LUNAS");
-```
-
-Links only accept `http`, `https`, `mailto` and `tel`. In templates: `<a href="…">`,
-`anchor="…"`, `<toc/>`, `<attachment src="data.csv"/>` and
-`<document pageMode="outlines" zoom="fitWidth">`.
-
-### Open and edit existing PDFs
-
-```csharp
-using LifeOS.Pdf.Manipulation;
-
-var doc = PdfDocument.Open("contract.pdf");          // any PDF 1.0–1.7 / 2.0 file (not encrypted)
-doc.Pages[0].Graphics.DrawText("DISETUJUI", font, 400, 60, PdfColor.Red);
-doc.Pages[2].Rotation = 90;
-doc.RemovePage(5);
-doc.Save("contract-signed.pdf");
-
-var all = PdfMerger.Merge(new[] { "invoice.pdf", "receipt.pdf" });   // a bookmark per file
-PdfStamper.AddTextWatermark(all, "SALINAN");
-PdfStamper.AddPageNumbers(all, "Halaman {page} dari {pages}");
-PdfStamper.AddBatesNumbers(all, "LIFEOS-");
-all.Save("all.pdf", new PdfSaveOptions { UseObjectStreams = true }); // smaller file
-
-var parts = PdfSplitter.SplitEvery(PdfDocument.Open("big.pdf"), 10);
-var twoUp = PdfImposition.NUp(doc, columns: 2, rows: 1);
-var booklet = PdfImposition.Booklet(doc);
-PdfImposition.Overlay(doc, PdfDocument.Open("letterhead.pdf").Pages[0]); // behind the content
-newPage.Graphics.DrawPage(doc.Pages[0], 40, 40, 250, 350);            // a page as a vector image
-```
-
-The parser handles cross-reference streams, object streams, incremental updates and damaged
-files (the cross-reference is rebuilt), and is safe on untrusted input: nesting, stream size,
-object count and page count are limited (`PdfReadOptions`), and scripts in copied
-annotations are dropped. Encrypted files open with `PdfReadOptions.Password`.
-
-### Extract text, tables and images · search · redact
-
-```csharp
-using LifeOS.Pdf.Extraction;
-
-var doc = PdfDocument.Open("mutasi-rekening.pdf");
-string text = doc.ExtractText();                                         // reading order, pages split by \f
-string grid = doc.Pages[0].ExtractText(new TextExtractionOptions { Layout = true });
-foreach (var word in doc.Pages[0].GetWords())                            // text + box + font
-    Console.WriteLine($"{word.Text} {word.Bounds} {word.FontName} {word.FontSize}");
-
-foreach (var table in doc.Pages[0].ExtractTables())                      // ruled or column-aligned
-    File.WriteAllText("table.csv", table.ToCsv());                       // also ToJson()
-
-foreach (var image in doc.Pages[0].GetImages())                          // JPEG as is, others → PNG
-    image.Save("images/" + image.Name);
-
-var hits = doc.Search("Rp1.924.500");                                    // page + rectangles
-File.WriteAllText("doc.html", PdfTextConverter.ToHtml(doc));
-
-PdfRedactor.RedactText(doc, "3174012345678901");                         // removed from the file, not just covered
-PdfRedactor.Redact(doc.Pages[0], new PdfRect(400, 520, 140, 140));       // an area (e.g. a QR code)
-doc.Save("redacted.pdf");
-```
-
-Fonts are decoded through ToUnicode CMaps, encodings with /Differences and the Adobe Glyph List,
-and CID fonts. Positions are in points with the origin at the top-left of the page as displayed.
-Redaction removes glyphs (the rest of the line stays in place), images, vector shapes and
-annotations inside the area, rewrites form XObjects, and scrubs the text from metadata and
-bookmarks; it is verified with pypdf, PDFium and zxing in CI.
-
-### Images → PDF
-
-```csharp
-using LifeOS.Pdf.Conversion;
-
-var scan = ImageToPdf.Convert(new[] { "page1.jpg", "page2.png" },
-    new ImageToPdfOptions { PageSize = PageSize.A4, Margin = 36 });
-scan.Save("scan.pdf");
-```
-
-More examples in [samples/LifeOS.Pdf.Samples](samples/LifeOS.Pdf.Samples/Program.cs).
-
-### Forms
-
-Create fillable forms, fill existing ones and flatten them into static content — all in the
-core package.
-
-```csharp
-using LifeOS.Pdf.Forms;
-
-var page = doc.AddPage();
-page.AddTextField("Customer.Nama", 72, 72, 200, 20).Value = "Budi";
-page.AddCheckBox("Setuju", 72, 110, 16, 16).Checked = true;
-page.AddRadioButton("Gender", "Pria", 72, 140, 14, 14);
-page.AddRadioButton("Gender", "Wanita", 130, 140, 14, 14);
-page.AddComboBox("Kota", 72, 170, 150, 20, "Jakarta", "Bandung").SelectedValues = new[] { "Bandung" };
-doc.Save("form.pdf");
-
-// Fill an opened form, then bake the result into static pages
-var form = PdfDocument.Open("form.pdf");
-form.Form.SetValue("Customer.Nama", "Siti");
-form.Form.Flatten();
-form.Save("flat.pdf");
-```
-
-Text, checkbox, radio group, combo/list, push button and signature fields, with appearance
-streams written for every state; `ExportJson`/`ImportJson` for field data.
-
-### Encryption & digital signatures
-
-Password protection (standard security handler, RC4-128 and AES-128) is in the core package.
-
-```csharp
-doc.Save("encrypted.pdf", new PdfSaveOptions
-{
-    Encryption = new PdfEncryptionOptions { UserPassword = "rahasia", OwnerPassword = "owner" },
-});
-
-var opened = PdfDocument.Open("encrypted.pdf", new PdfReadOptions { Password = "rahasia" });
-opened.Save("decrypted.pdf");   // save without Encryption to remove the password
-```
-
-Digital signatures are in the separate package `LifeOS.Pdf.Signing` (.NET 8+):
-
-```csharp
-using LifeOS.Pdf.Signing;
-
-page.AddSignatureField("Ttd", 400, 700, 160, 40);
-var signed = new PdfSigner(certificate) { Reason = "Persetujuan" }.Sign(doc);  // CMS/PKCS#7, PAdES B-B
-var result = PdfSignatureValidator.Verify(signed);   // IsValid, SignerName, CoversWholeDocument
-```
-
-### Render, read QR/barcodes & OCR (separate packages)
-
-Three optional packages for scanned documents. They use native libraries, so install the
-runtime as described in each package.
-
-```csharp
-using LifeOS.Pdf.Rendering;
-using LifeOS.Pdf.BarcodeScanning;
-using LifeOS.Pdf.Ocr;
-using LifeOS.Pdf.Scanning;
-
-// Render a page to PNG at a chosen DPI (PDFium)
-var image = new PdfRenderer().Render(doc.ToArray(), 0, new RenderOptions { Dpi = 200 });
-
-// Read every QR code / barcode on the page (zxing-cpp)
-foreach (var b in new BarcodeReader().ReadAllPng(image.Png))
-    Console.WriteLine($"[{b.Format}] {b.Text}");
-
-// OCR text from a scanned image (Tesseract; needs the tessdata language files)
-using var ocr = new OcrEngine("/path/to/tessdata", "eng+ind");
-string text = ocr.RecognizeText(image.Png);
-
-// Or combine render + barcode + OCR in one call
-using var scanner = new DocumentScanner("/path/to/tessdata", "eng");
-var scanned = scanner.ScanPage(doc, 0);   // ScannedPage.Text + ScannedPage.Barcodes
-```
-
 ## Build & test
 
 Requires the .NET SDK 8 or newer (SDK 10 also builds the `net10.0` target).
@@ -405,6 +84,14 @@ External validation (Python 3.10+, development only — not needed to use the li
 pip install pikepdf pypdf pypdfium2 fonttools opentype-sanitizer
 python tools/validate_pdf.py out/net8.0/showcase.pdf --render-dir out/png
 ```
+
+## Further reading
+
+- **[Step-by-step tutorial](docs/tutorial.md)** — the full walkthrough with runnable examples.
+- [docs/PHASES.md](docs/PHASES.md) — full roadmap and use-case mapping.
+- [docs/templates.md](docs/templates.md) — the template language reference.
+- [samples/LifeOS.Pdf.Samples](samples/LifeOS.Pdf.Samples/Program.cs) — a sample app with
+  every feature.
 
 ## How it is developed
 
