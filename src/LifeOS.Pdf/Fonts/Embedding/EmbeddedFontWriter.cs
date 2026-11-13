@@ -18,7 +18,7 @@ namespace LifeOS.Pdf.Fonts.Embedding
         public static void Write(PdfIndirectObject type0, TrueTypeFontProgram program, FontUsage usage, Func<PdfIndirectObject> newObject)
         {
             var font = program.Font;
-            var glyphs = new List<int>(usage.GlyphToCodePoint.Keys);
+            var glyphs = new List<int>(usage.Glyphs);
             var fontFile = TrueTypeSubsetter.Subset(font, program.MustEmbedFully ? null : glyphs, usage.GlyphToCodePoint);
 
             // Subset tag (§9.9.2): six uppercase letters, derived from the content so it is

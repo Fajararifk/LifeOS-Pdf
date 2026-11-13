@@ -76,6 +76,8 @@ jobs:
             --expect-text "Halaman 3 dari 3" --expect-text "Rp1.924.500" \
             --expect-text "Xin chào thế giới" --expect-text "Καλημέρα κόσμε" --expect-text "Привет, мир"
           python tools/validate_pdf.py out/*/images.pdf --render-dir out/png
+          python tools/validate_pdf.py out/*/report.pdf --render-dir out/png \
+            --expect-text "Laporan Keuangan November 2026" --expect-text "Rp7.482.500" --expect-text "Tiếng Việt"
 
       - uses: actions/upload-artifact@v4
         with:

@@ -29,9 +29,9 @@ TEST_ASSETS = os.path.join(ROOT, "tests", "LifeOS.Pdf.Tests", "TestAssets")
 SAMPLE_ASSETS = os.path.join(ROOT, "samples", "LifeOS.Pdf.Samples", "Assets")
 
 
-def make_subset(source, target, unicodes, keep_hinting=True):
+def make_subset(source, target, unicodes, keep_hinting=True, features=()):
     options = subset.Options()
-    options.layout_features = []          # no GSUB/GPOS: shaping is Fase 2
+    options.layout_features = list(features)  # default none; 'kern' for the kerning tests
     options.notdef_outline = True
     options.glyph_names = False
     options.hinting = keep_hinting        # keep cvt/fpgm/prep so the subsetter copies them
@@ -60,6 +60,24 @@ def fonts(src):
     ttc.save(os.path.join(out, "test.ttc"))
     print("tests/.../fonts/test.ttc:", os.path.getsize(os.path.join(out, "test.ttc")), "bytes")
     shutil.copy(os.path.join(src, "OFL.txt"), os.path.join(out, "OFL.txt"))
+
+    # Kerning (Fase 2): GPOS 'kern' kept, and a variant with only a legacy 'kern' table.
+    ascii_range = list(range(0x20, 0x7F))
+    gpos_path = os.path.join(out, "NotoSans-kern.ttf")
+    make_subset(os.path.join(src, "NotoSans-Regular.ttf"), gpos_path, ascii_range, keep_hinting=False, features=["kern"])
+    legacy = TTFont(gpos_path, recalcTimestamp=False)
+    del legacy["GPOS"]
+    from fontTools.ttLib import newTable
+    from fontTools.ttLib.tables._k_e_r_n import KernTable_format_0
+    kern = newTable("kern")
+    kern.version = 0
+    sub = KernTable_format_0()
+    sub.version, sub.length, sub.coverage, sub.format = 0, None, 1, 0
+    sub.kernTable = {("A", "V"): -80, ("T", "o"): -60}
+    kern.kernTables = [sub]
+    legacy["kern"] = kern
+    legacy.save(os.path.join(out, "NotoSans-kerntable.ttf"))
+    print("tests/.../fonts/NotoSans-kerntable.ttf:", os.path.getsize(os.path.join(out, "NotoSans-kerntable.ttf")), "bytes")
 
     os.makedirs(SAMPLE_ASSETS, exist_ok=True)
     make_subset(os.path.join(src, "NotoSans-Regular.ttf"), os.path.join(SAMPLE_ASSETS, "NotoSans-sample.ttf"),

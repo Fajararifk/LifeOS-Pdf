@@ -55,6 +55,11 @@ namespace LifeOS.Pdf.Samples
             var imagesPath = Path.Combine(outputDir, "images.pdf");
             images.Save(imagesPath);
             Console.WriteLine("Wrote " + imagesPath + " (" + new FileInfo(imagesPath).Length + " bytes)");
+
+            // Layout engine (Fase 2): multi-page report.
+            var reportPath = Path.Combine(outputDir, "report.pdf");
+            ReportSample.Build(Path.Combine(AppContext.BaseDirectory, "Assets")).Save(reportPath);
+            Console.WriteLine("Wrote " + reportPath + " (" + new FileInfo(reportPath).Length + " bytes)");
             return 0;
         }
 

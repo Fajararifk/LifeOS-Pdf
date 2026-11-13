@@ -64,7 +64,31 @@ namespace LifeOS.Pdf.Fonts.TrueType
         /// </summary>
         public int GlyphWidth(int glyphId) => (int)Math.Round(ToPdfUnits(Font.AdvanceWidth(glyphId)), MidpointRounding.AwayFromZero);
 
-        public TextRun Map(string text)
+        public double UnderlinePosition => Font.UnderlinePosition != 0 ? ToPdfUnits(Font.UnderlinePosition) : -100;
+
+        public double UnderlineThickness => Font.UnderlineThickness > 0 ? ToPdfUnits(Font.UnderlineThickness) : 50;
+
+        /// <summary>Pair kerning, loaded on first use; malformed data yields an empty table.</summary>
+        public KerningTable Kerning
+        {
+            get
+            {
+                if (_kerning == null)
+                {
+                    lock (_gate)
+                    {
+                        _kerning = _kerning ?? KerningTable.Load(Font);
+                    }
+                }
+
+                return _kerning;
+            }
+        }
+
+        private KerningTable? _kerning;
+        private readonly object _gate = new object();
+
+        public TextRun Map(string text, bool kerning = false)
         {
             var codePoints = CodePointReader.Read(text);
             var codes = new byte[codePoints.Count * 2];
@@ -79,7 +103,23 @@ namespace LifeOS.Pdf.Fonts.TrueType
                 width += GlyphWidth(gid);
             }
 
-            return new TextRun(codes, glyphs, codePoints.ToArray(), width);
+            double[]? adjustments = null;
+            if (kerning && glyphs.Length > 1 && !Kerning.IsEmpty)
+            {
+                adjustments = new double[glyphs.Length];
+                for (var i = 0; i + 1 < glyphs.Length; i++)
+                {
+                    var k = Kerning.Get(glyphs[i], glyphs[i + 1]);
+                    if (k != 0)
+                    {
+                        // Rounded like glyph widths so measuring and drawing agree exactly.
+                        adjustments[i] = Math.Round(ToPdfUnits(k), MidpointRounding.AwayFromZero);
+                        width += adjustments[i];
+                    }
+                }
+            }
+
+            return new TextRun(codes, glyphs, codePoints.ToArray(), width, adjustments);
         }
 
         private double ToPdfUnits(double fontUnits) => fontUnits * 1000.0 / Font.UnitsPerEm;

@@ -60,9 +60,15 @@ namespace LifeOS.Pdf.Fonts.Standard
 
         public double CapHeight => _data.CapHeight;
 
+        // Adobe Core14 AFM values (UnderlinePosition −100 / UnderlineThickness 50 for these families).
+        public double UnderlinePosition => -100;
+
+        public double UnderlineThickness => 50;
+
         public bool HasGlyph(int codePoint) => TryEncode(codePoint, out var code) && _data.GetWidth(code) > 0;
 
-        public TextRun Map(string text)
+        /// <summary>Standard fonts are not kerned (AFM kerning pairs are not bundled).</summary>
+        public TextRun Map(string text, bool kerning = false)
         {
             var codePoints = CodePointReader.Read(text);
             var codes = new List<byte>(codePoints.Count);

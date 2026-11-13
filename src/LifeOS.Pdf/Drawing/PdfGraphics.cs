@@ -359,6 +359,61 @@ namespace LifeOS.Pdf.Drawing
             End();
         }
 
+        /// <summary>
+        /// Draws an already mapped glyph run with its baseline at <paramref name="baseline"/>
+        /// (top-left coordinates). Per-glyph adjustments (kerning) plus optional extra
+        /// advance in points (justification) are written with TJ (ISO 32000-1 §9.4.3);
+        /// TJ is needed because word spacing (Tw) does not apply to 2-byte Identity-H codes.
+        /// </summary>
+        internal void DrawGlyphRun(PdfFont font, TextRun run, double[]? extraPoints, double x, double baseline, PdfColor color)
+        {
+            if (run.Codes.Length == 0)
+            {
+                return;
+            }
+
+            var name = _page.UseFont(font.Face, run);
+            Begin();
+            Op(ColorOperands(color), "rg");
+            Op("BT");
+            Op("/" + name, N(font.Size), "Tf");
+            Op("1", "0", "0", "1", N(x), N(Y(baseline)), "Tm");
+
+            var bpg = run.BytesPerGlyph;
+            var glyphCount = run.Glyphs.Length;
+            var tj = new StringBuilder("[<");
+            var any = false;
+            for (var i = 0; i < glyphCount; i++)
+            {
+                for (var b = 0; b < bpg; b++)
+                {
+                    tj.Append(run.Codes[i * bpg + b].ToString("X2", System.Globalization.CultureInfo.InvariantCulture));
+                }
+
+                var adjust = run.Adjustments[i] + (extraPoints != null ? extraPoints[i] * 1000.0 / font.Size : 0);
+                var rounded = Math.Round(adjust, 3);
+                if (rounded != 0 && i < glyphCount - 1)
+                {
+                    // TJ numbers are subtracted from the position: negative = move right.
+                    tj.Append("> ").Append(N(-rounded)).Append(" <");
+                    any = true;
+                }
+            }
+
+            tj.Append(">]");
+            if (any)
+            {
+                Op(tj.ToString(), "TJ");
+            }
+            else
+            {
+                Op("<" + PdfFormat.Hex(run.Codes) + ">", "Tj");
+            }
+
+            Op("ET");
+            End();
+        }
+
         private double Y(double y) => _page.Height - y;
 
         private static string N(double v) => PdfFormat.Number(v);

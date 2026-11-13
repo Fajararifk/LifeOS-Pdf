@@ -11,13 +11,20 @@ namespace LifeOS.Pdf.Fonts.Embedding
     {
         public SortedDictionary<int, int> GlyphToCodePoint { get; } = new SortedDictionary<int, int>();
 
+        /// <summary>Glyphs used (including .notdef, which has no single Unicode meaning).</summary>
+        public SortedSet<int> Glyphs { get; } = new SortedSet<int>();
+
         public void Add(TextRun run)
         {
             for (var i = 0; i < run.Glyphs.Length; i++)
             {
-                if (!GlyphToCodePoint.ContainsKey(run.Glyphs[i]))
+                var gid = run.Glyphs[i];
+                Glyphs.Add(gid);
+                // .notdef stands for every missing character: giving it one Unicode value
+                // would make copy-paste return a wrong letter (QA Fase 1), so it gets none.
+                if (gid != 0 && !GlyphToCodePoint.ContainsKey(gid))
                 {
-                    GlyphToCodePoint[run.Glyphs[i]] = run.CodePoints[i];
+                    GlyphToCodePoint[gid] = run.CodePoints[i];
                 }
             }
         }

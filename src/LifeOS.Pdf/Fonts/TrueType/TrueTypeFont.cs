@@ -51,6 +51,11 @@ namespace LifeOS.Pdf.Fonts.TrueType
 
         public double ItalicAngle { get; private set; }
 
+        /// <summary>From 'post', in font units (negative = below baseline); 0 when absent.</summary>
+        public short UnderlinePosition { get; private set; }
+
+        public short UnderlineThickness { get; private set; }
+
         public bool IsFixedPitch { get; private set; }
 
         public bool IsBold { get; private set; }
@@ -349,6 +354,8 @@ namespace LifeOS.Pdf.Fonts.TrueType
 
             var fixedAngle = unchecked((int)BigEndian.U32(Data, post.Offset + 4));
             ItalicAngle = fixedAngle / 65536.0;
+            UnderlinePosition = BigEndian.I16(Data, post.Offset + 8);
+            UnderlineThickness = BigEndian.I16(Data, post.Offset + 10);
             IsFixedPitch = BigEndian.U32(Data, post.Offset + 12) != 0;
         }
 

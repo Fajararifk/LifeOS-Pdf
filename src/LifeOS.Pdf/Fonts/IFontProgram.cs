@@ -29,25 +29,63 @@ namespace LifeOS.Pdf.Fonts
 
         double CapHeight { get; }
 
+        /// <summary>Underline position below the baseline (negative), 1/1000 em.</summary>
+        double UnderlinePosition { get; }
+
+        double UnderlineThickness { get; }
+
         bool HasGlyph(int codePoint);
 
         /// <summary>Converts text to the bytes written in the content stream plus metrics.</summary>
-        TextRun Map(string text);
+        /// <param name="text">Text to map.</param>
+        /// <param name="kerning">Apply pair kerning (TrueType fonts with kerning data).</param>
+        TextRun Map(string text, bool kerning = false);
     }
 
     /// <summary>The result of mapping a string onto a font.</summary>
     internal sealed class TextRun
     {
         public TextRun(byte[] codes, int[] glyphs, int[] codePoints, double width)
+            : this(codes, glyphs, codePoints, width, null)
+        {
+        }
+
+        public TextRun(byte[] codes, int[] glyphs, int[] codePoints, double width, double[]? adjustments)
         {
             Codes = codes;
             Glyphs = glyphs;
             CodePoints = codePoints;
             Width = width;
+            Adjustments = adjustments ?? new double[glyphs.Length];
+            BytesPerGlyph = glyphs.Length == 0 ? 1 : codes.Length / glyphs.Length;
         }
 
         /// <summary>Bytes for the PDF string operand (1 byte per glyph for simple fonts, 2 for Identity-H).</summary>
         public byte[] Codes { get; }
+
+        public int BytesPerGlyph { get; }
+
+        /// <summary>
+        /// Extra advance after each glyph in 1/1000 em (kerning; positive = wider), already
+        /// included in <see cref="Width"/>. Written with the TJ operator.
+        /// </summary>
+        public double[] Adjustments { get; }
+
+        public bool HasAdjustments
+        {
+            get
+            {
+                foreach (var a in Adjustments)
+                {
+                    if (a != 0)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        }
 
         /// <summary>Glyph IDs (TrueType) or character codes (standard fonts), parallel to <see cref="CodePoints"/>.</summary>
         public int[] Glyphs { get; }

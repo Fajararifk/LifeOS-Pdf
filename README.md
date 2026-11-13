@@ -12,6 +12,7 @@ Adobe Acrobat, maupun PDF reader lain.
 <p align="center">
   <img src="docs/images/showcase-p1.png" width="380" alt="Halaman contoh: teks, 14 font standar, bentuk, gambar JPEG">
   <img src="docs/images/showcase-p3.png" width="380" alt="Halaman contoh: font Unicode tertanam, PNG transparan, rotasi dan watermark">
+  <img src="docs/images/report-p1.png" width="380" alt="Laporan keuangan multi-halaman dari layout engine: paragraf justify, daftar, tabel dengan rowspan dan colspan">
 </p>
 
 ## Status
@@ -20,8 +21,8 @@ Adobe Acrobat, maupun PDF reader lain.
 |---|---|---|
 | 0 | Core writer: halaman, teks 14 font standar, bentuk, JPEG, kompresi, metadata | ✅ v0.1 |
 | 1 | Font TrueType + Unicode, PNG transparan, gambar → PDF, rotasi & opacity | ✅ v0.2 |
-| 2 | Layout engine: paragraf, tabel multi-halaman, header/footer | berikutnya |
-| 3 | Laporan dari template (invoice, slip gaji, laporan keuangan) | rencana |
+| 2 | Layout engine: paragraf, tabel multi-halaman, header/footer, kerning, font fallback | ✅ v0.3 |
+| 3 | Laporan dari template (invoice, slip gaji, laporan keuangan) | berikutnya |
 | 4 | Buat QR & barcode (vektor, PNG, SVG) | rencana |
 | 5 | Link, bookmark, lampiran, anotasi | rencana |
 | 6 | Buka PDF, merge, split, watermark, kompres | rencana |
@@ -77,6 +78,45 @@ using (g.Save())
 
 Font di-*subset* otomatis (hanya glyph yang dipakai ikut tertanam) dan teks tetap
 bisa di-copy serta dicari di viewer.
+
+### Laporan multi-halaman (layout engine)
+
+Tidak perlu menghitung koordinat: susun konten, library yang memotong baris,
+membuat halaman baru, mengulang header tabel, dan mengisi "Halaman X dari Y".
+
+```csharp
+using LifeOS.Pdf.Layout;
+
+var doc = new FlowDocument();
+doc.Styles.Normal = new TextStyle { Family = FontFamily.Helvetica, Size = 10,
+    Fallbacks = { FontFamily.FromFiles("NotoSans-Regular.ttf") } };   // untuk karakter non-Latin
+
+var section = doc.AddSection(new PageSetup { PageSize = PageSize.A4 });
+section.Footer.AddParagraph().AddText("Halaman ").AddPageNumber().AddText(" dari ").AddPageCount()
+    .Format.Alignment = ParagraphAlignment.Center;
+
+section.AddHeading("Laporan Keuangan November 2026");
+section.AddParagraph()
+    .AddText("Total pengeluaran ")
+    .AddText("Rp7.482.500", new TextStyle { Bold = true })
+    .AddText(", turun 12% dari bulan lalu.");
+
+var table = section.AddTable();
+table.AddColumn(ColumnWidth.Auto);
+table.AddColumn(ColumnWidth.Relative());
+table.AddColumn(ColumnWidth.Fixed(90), ParagraphAlignment.Right);
+table.HeaderRows = 1;                                   // diulang di setiap halaman
+table.AlternateRowBackground = PdfColor.FromHex("#F9FAFB");
+table.AddRow("Tanggal", "Catatan", "Nominal");
+foreach (var t in transaksi)
+    table.AddRow(t.Tanggal, t.Catatan, t.Nominal);
+
+doc.Save("laporan.pdf");
+```
+
+Juga tersedia: justify, daftar bullet/bernomor, colspan/rowspan, gambar dalam alur,
+dua kolom, keep-with-next, page break, header/footer berbeda di halaman pertama.
+Contoh lengkap: [ReportSample.cs](samples/LifeOS.Pdf.Samples/ReportSample.cs).
 
 ### Gambar → PDF
 

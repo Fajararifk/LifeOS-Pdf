@@ -3,6 +3,27 @@
 Format: [Keep a Changelog](https://keepachangelog.com/), versi mengikuti [SemVer](https://semver.org/).
 Sebelum v1.0, versi minor boleh berisi perubahan breaking (selalu dicatat di sini).
 
+## [0.3.0] — Fase 2: Layout Engine
+
+### Added
+- `LifeOS.Pdf.Layout.FlowDocument`: dokumen sebagai alur konten yang dipaginasi otomatis.
+  - Section dengan ukuran kertas, margin, kolom ganda, header & footer (beda di halaman pertama),
+    field nomor halaman dan jumlah halaman ("Halaman 3 dari 12").
+  - Paragraf dengan gaya campuran (font family, ukuran, tebal, miring, warna, garis bawah, coret),
+    perataan kiri/tengah/kanan/justify, indent, spasi, keep-together, keep-with-next, page break.
+  - Heading 1–3, daftar bullet/bernomor bertingkat, gambar, garis horizontal, spasi.
+  - Tabel: kolom Fixed/Percent/Relative/Auto, colspan, rowspan, header berulang di setiap halaman,
+    baris zebra, latar sel, perataan vertikal, tabel bersarang.
+  - `FontFamily` (Regular/Bold/Italic/BoldItalic) dan **font fallback** per karakter.
+  - `LayoutException` dengan pesan jelas bila konten tidak mungkin muat.
+- Kerning untuk font TrueType (GPOS `kern` dan tabel `kern`), aktif di layout engine.
+
+### Fixed
+- Karakter yang tidak punya glyph tidak lagi diberi entri ToUnicode (copy-paste tidak menghasilkan huruf yang salah).
+
+### Notes
+- `PdfGraphics` tidak berubah: tetap tanpa kerning, output Fase 0–1 identik.
+
 ## [0.2.0] — Fase 1: Font, Gambar & Image→PDF
 
 ### Added

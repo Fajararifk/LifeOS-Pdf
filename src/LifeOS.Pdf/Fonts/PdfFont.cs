@@ -59,6 +59,6 @@ namespace LifeOS.Pdf.Fonts
             return Face.Program.Map(text).Width * Size / 1000.0;
         }
 
-        internal TextRun Map(string text) => Face.Program.Map(text);
+        internal TextRun Map(string text, bool kerning = false) => Face.Program.Map(text, kerning);
     }
 }

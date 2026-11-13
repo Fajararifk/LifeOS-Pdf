@@ -54,7 +54,7 @@ nol tidak realistis (browser engine, OCR).
 | # | Use case | Fase | Cara |
 |---|---|---|---|
 | 1 | PDF dari HTML (WkHtmlToPdf) | 11 | Integrasi: `LifeOS.Pdf.Html`, backend wkhtmltopdf **dan** Chromium |
-| 2 | PDF dari kode C# (layout, tabel, gambar, header/footer) | 0 ✅ + 1 ✅ + 2 | Dari nol |
+| 2 | PDF dari kode C# (layout, tabel, gambar, header/footer) | 0 ✅ + 1 ✅ + 2 ✅ | Dari nol |
 | 3 | Membuat PDF + manipulasi dasar | 0 ✅ + 6 | Dari nol |
 | 4 | Buat, ekstrak teks, merge, split, isi form, enkripsi | 6, 7, 8, 9 | Dari nol |
 | 5 | Membuat & convert PDF (gambar↔PDF, PDF→teks/CSV, PDF/A) | 1 ✅ (gambar→PDF), 7, 10, 12 | Dari nol + integrasi render |
@@ -74,7 +74,7 @@ parser (merge, ekstrak, form) menyusul, lalu integrasi engine eksternal di akhir
 |---|---|---|---|---|
 | Buat PDF (teks, shape, gambar) | ✓ | ✓ | ✓ | Fase 0 ✅ |
 | Font TrueType + Unicode, PNG | ✓ | ✓ | ✓ | Fase 1 ✅ |
-| Layout engine (tabel, flow, header/footer) | MigraDoc | ✓ | ✓ | Fase 2 |
+| Layout engine (tabel, flow, header/footer) | MigraDoc | ✓ | ✓ | Fase 2 ✅ |
 | Laporan dari template | – | pdfHTML | ✓ | Fase 3 |
 | QR & barcode (buat) | – | ✓ | ✓ | Fase 4 |
 | Link, bookmark, lampiran | ✓ | ✓ | ✓ | Fase 5 |
@@ -112,7 +112,9 @@ SPESIFIKASI:
 - Konversi gambar → PDF: `ImageToPdf.Convert(files, pageSize, fit)` (JPEG, PNG).
 - Transformasi dasar di `PdfGraphics`: rotate, scale, opacity sederhana.
 
-## FASE 2 — Layout Engine (v0.3)  · use case 2
+## FASE 2 — Layout Engine ✅ (v0.3)  · use case 2
+Selesai, plus kerning & font fallback dari Fase 1. Belum: memotong satu baris tabel
+lintas halaman, shaping (GSUB), hyphenation berbasis kamus → backlog.
 SPESIFIKASI:
 - Model dokumen fluent: Document → Section → Paragraph / Table / Image / List / Spacer.
 - Paragraf multi-style (bold/italic/warna dalam satu paragraf), justify,
