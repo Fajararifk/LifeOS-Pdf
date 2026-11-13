@@ -23,6 +23,8 @@
 
   <ItemGroup>
     <None Include="TestAssets\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The sample data of the built-in templates doubles as test data. -->
+    <None Include="..\..\samples\LifeOS.Pdf.Samples\Assets\data\*.json" Link="TestAssets\data\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

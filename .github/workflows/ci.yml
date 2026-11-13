@@ -78,6 +78,9 @@ jobs:
           python tools/validate_pdf.py out/*/images.pdf --render-dir out/png
           python tools/validate_pdf.py out/*/report.pdf --render-dir out/png \
             --expect-text "Laporan Keuangan November 2026" --expect-text "Rp7.482.500" --expect-text "Tiếng Việt"
+          python tools/validate_pdf.py out/*/template-invoice.pdf --expect-text "Rp24.031.500"
+          python tools/validate_pdf.py out/*/template-payslip.pdf --expect-text "Rp20.414.577"
+          python tools/validate_pdf.py out/*/template-*.pdf --render-dir out/png
 
       - uses: actions/upload-artifact@v4
         with:

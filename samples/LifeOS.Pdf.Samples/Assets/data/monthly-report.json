@@ -1,0 +1,349 @@
+{
+  "Owner": "Fajar Arif",
+  "Month": "2026-11",
+  "GeneratedAt": "2026-11-30",
+  "Income": [
+    {
+      "Date": "2026-11-01",
+      "Category": "Gaji",
+      "Note": "Gaji November",
+      "Amount": 19985577
+    },
+    {
+      "Date": "2026-11-15",
+      "Category": "Freelance",
+      "Note": "Invoice INV-2026-0042",
+      "Amount": 4500000
+    },
+    {
+      "Date": "2026-11-28",
+      "Category": "Dividen",
+      "Note": "Reksa dana",
+      "Amount": 275000
+    }
+  ],
+  "Expenses": [
+    {
+      "Date": "2026-11-11",
+      "Category": "Makan",
+      "Note": "Kopi",
+      "Amount": 288000
+    },
+    {
+      "Date": "2026-11-28",
+      "Category": "Pendidikan",
+      "Note": "Kursus online .NET",
+      "Amount": 563000
+    },
+    {
+      "Date": "2026-11-29",
+      "Category": "Transportasi",
+      "Note": "Ojek online",
+      "Amount": 165000
+    },
+    {
+      "Date": "2026-11-27",
+      "Category": "Kesehatan",
+      "Note": "Dokter gigi",
+      "Amount": 444000
+    },
+    {
+      "Date": "2026-11-19",
+      "Category": "Hiburan",
+      "Note": "Langganan streaming",
+      "Amount": 113000
+    },
+    {
+      "Date": "2026-11-20",
+      "Category": "Makan",
+      "Note": "Belanja mingguan",
+      "Amount": 78000
+    },
+    {
+      "Date": "2026-11-27",
+      "Category": "Internet",
+      "Note": "Langganan bulanan",
+      "Amount": 350000
+    },
+    {
+      "Date": "2026-11-27",
+      "Category": "Makan",
+      "Note": "Kopi",
+      "Amount": 277000
+    },
+    {
+      "Date": "2026-11-11",
+      "Category": "Pendidikan",
+      "Note": "Kursus online .NET",
+      "Amount": 307000
+    },
+    {
+      "Date": "2026-11-12",
+      "Category": "Internet",
+      "Note": "Langganan bulanan",
+      "Amount": 350000
+    },
+    {
+      "Date": "2026-11-17",
+      "Category": "Pendidikan",
+      "Note": "Kursus online .NET",
+      "Amount": 478000
+    },
+    {
+      "Date": "2026-11-03",
+      "Category": "Internet",
+      "Note": "Langganan bulanan",
+      "Amount": 350000
+    },
+    {
+      "Date": "2026-11-05",
+      "Category": "Listrik",
+      "Note": "Token PLN",
+      "Amount": 300000
+    },
+    {
+      "Date": "2026-11-23",
+      "Category": "Hiburan",
+      "Note": "Langganan streaming",
+      "Amount": 145000
+    },
+    {
+      "Date": "2026-11-14",
+      "Category": "Listrik",
+      "Note": "Token PLN",
+      "Amount": 300000
+    },
+    {
+      "Date": "2026-11-18",
+      "Category": "Kesehatan",
+      "Note": "Dokter gigi",
+      "Amount": 111000
+    },
+    {
+      "Date": "2026-11-17",
+      "Category": "Listrik",
+      "Note": "Token PLN",
+      "Amount": 300000
+    },
+    {
+      "Date": "2026-11-09",
+      "Category": "Kesehatan",
+      "Note": "Dokter gigi",
+      "Amount": 346000
+    },
+    {
+      "Date": "2026-11-17",
+      "Category": "Listrik",
+      "Note": "Token PLN",
+      "Amount": 300000
+    },
+    {
+      "Date": "2026-11-05",
+      "Category": "Hiburan",
+      "Note": "Bioskop",
+      "Amount": 235000
+    },
+    {
+      "Date": "2026-11-29",
+      "Category": "Kesehatan",
+      "Note": "Vitamin & obat",
+      "Amount": 426000
+    },
+    {
+      "Date": "2026-11-14",
+      "Category": "Kesehatan",
+      "Note": "Dokter gigi",
+      "Amount": 125000
+    },
+    {
+      "Date": "2026-11-29",
+      "Category": "Listrik",
+      "Note": "Token PLN",
+      "Amount": 300000
+    },
+    {
+      "Date": "2026-11-23",
+      "Category": "Pendidikan",
+      "Note": "Buku",
+      "Amount": 453000
+    },
+    {
+      "Date": "2026-11-23",
+      "Category": "Listrik",
+      "Note": "Token PLN",
+      "Amount": 300000
+    },
+    {
+      "Date": "2026-11-10",
+      "Category": "Pendidikan",
+      "Note": "Buku",
+      "Amount": 521000
+    },
+    {
+      "Date": "2026-11-14",
+      "Category": "Listrik",
+      "Note": "Token PLN",
+      "Amount": 300000
+    },
+    {
+      "Date": "2026-11-09",
+      "Category": "Hiburan",
+      "Note": "Bioskop",
+      "Amount": 59000
+    },
+    {
+      "Date": "2026-11-21",
+      "Category": "Transportasi",
+      "Note": "Ojek online",
+      "Amount": 152000
+    },
+    {
+      "Date": "2026-11-12",
+      "Category": "Listrik",
+      "Note": "Token PLN",
+      "Amount": 300000
+    },
+    {
+      "Date": "2026-11-16",
+      "Category": "Pendidikan",
+      "Note": "Buku",
+      "Amount": 367000
+    },
+    {
+      "Date": "2026-11-27",
+      "Category": "Hiburan",
+      "Note": "Langganan streaming",
+      "Amount": 164000
+    },
+    {
+      "Date": "2026-11-22",
+      "Category": "Kesehatan",
+      "Note": "Vitamin & obat",
+      "Amount": 486000
+    },
+    {
+      "Date": "2026-11-11",
+      "Category": "Internet",
+      "Note": "Langganan bulanan",
+      "Amount": 350000
+    },
+    {
+      "Date": "2026-11-23",
+      "Category": "Listrik",
+      "Note": "Token PLN",
+      "Amount": 300000
+    },
+    {
+      "Date": "2026-11-14",
+      "Category": "Transportasi",
+      "Note": "Ojek online",
+      "Amount": 32000
+    },
+    {
+      "Date": "2026-11-09",
+      "Category": "Pendidikan",
+      "Note": "Buku",
+      "Amount": 293000
+    },
+    {
+      "Date": "2026-11-07",
+      "Category": "Makan",
+      "Note": "Kopi",
+      "Amount": 236000
+    },
+    {
+      "Date": "2026-11-15",
+      "Category": "Transportasi",
+      "Note": "Isi saldo e-money",
+      "Amount": 39000
+    },
+    {
+      "Date": "2026-11-15",
+      "Category": "Makan",
+      "Note": "Kopi",
+      "Amount": 307000
+    },
+    {
+      "Date": "2026-11-03",
+      "Category": "Hiburan",
+      "Note": "Bioskop",
+      "Amount": 115000
+    },
+    {
+      "Date": "2026-11-20",
+      "Category": "Makan",
+      "Note": "Belanja mingguan",
+      "Amount": 414000
+    },
+    {
+      "Date": "2026-11-09",
+      "Category": "Kesehatan",
+      "Note": "Dokter gigi",
+      "Amount": 131000
+    },
+    {
+      "Date": "2026-11-11",
+      "Category": "Makan",
+      "Note": "Kopi",
+      "Amount": 326000
+    },
+    {
+      "Date": "2026-11-25",
+      "Category": "Kesehatan",
+      "Note": "Dokter gigi",
+      "Amount": 412000
+    },
+    {
+      "Date": "2026-11-05",
+      "Category": "Pendidikan",
+      "Note": "Kursus online .NET",
+      "Amount": 347000
+    },
+    {
+      "Date": "2026-11-05",
+      "Category": "Kesehatan",
+      "Note": "Dokter gigi",
+      "Amount": 94000
+    },
+    {
+      "Date": "2026-11-22",
+      "Category": "Listrik",
+      "Note": "Token PLN",
+      "Amount": 300000
+    }
+  ],
+  "Budgets": [
+    {
+      "Category": "Makan",
+      "Amount": 3000000
+    },
+    {
+      "Category": "Transportasi",
+      "Amount": 800000
+    },
+    {
+      "Category": "Internet",
+      "Amount": 350000
+    },
+    {
+      "Category": "Listrik",
+      "Amount": 400000
+    },
+    {
+      "Category": "Kesehatan",
+      "Amount": 500000
+    },
+    {
+      "Category": "Pendidikan",
+      "Amount": 1000000
+    },
+    {
+      "Category": "Hiburan",
+      "Amount": 600000
+    }
+  ],
+  "Notes": [
+    "Pengeluaran makan naik karena acara keluarga minggu ke-3.",
+    "Target bulan depan: saving rate di atas 40%."
+  ]
+}

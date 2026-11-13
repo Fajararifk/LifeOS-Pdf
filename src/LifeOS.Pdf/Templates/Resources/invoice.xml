@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  LifeOS.Pdf built-in template: invoice (faktur).
+  Data: Number, Date, DueDate, Seller{Name, Address, Phone, Email, TaxId, Logo},
+        Customer{Name, Address, Phone, Email},
+        Items[{Name, Description, Quantity, Unit, Price}],
+        Discount (amount), TaxRate (e.g. 0.11 for PPN 11%), TaxName,
+        Bank{Name, AccountNumber, AccountName}, Notes[string].
+-->
+<document title="Invoice {{ Number }}" author="{{ Seller.Name }}" subject="Invoice {{ Number }} untuk {{ Customer.Name }}">
+  <styles>
+    <normal family="helvetica" size="9.5" color="#1F2937"/>
+    <tableHeader bold="true" color="#FFFFFF"/>
+  </styles>
+
+  <set name="Subtotal" value="Items | sumproduct:'Quantity':'Price'"/>
+  <set name="AfterDiscount" value="Subtotal - (Discount | default:0)"/>
+  <set name="Tax" value="AfterDiscount * (TaxRate | default:0)"/>
+  <set name="Total" value="AfterDiscount + Tax"/>
+
+  <section size="A4" margin="18mm 18mm 16mm 18mm">
+    <footer>
+      <hr spaceAfter="4"/>
+      <p align="center" size="7.5" color="#6B7280">{{ Seller.Name }} · Invoice {{ Number }} · Halaman <pageNumber/> dari <pageCount/></p>
+    </footer>
+
+    <table border="none" grid="none" headerBackground="none" padding="0" spaceAfter="14">
+      <column width="*"/>
+      <column width="auto" align="right"/>
+      <row>
+        <cell>
+          <image if="Seller.Logo" src="{{ Seller.Logo }}" width="90" spaceAfter="6"/>
+          <p size="13" bold="true" spaceAfter="2">{{ Seller.Name }}</p>
+          <p size="8.5" color="#4B5563" spaceAfter="0">{{ Seller.Address }}</p>
+          <p size="8.5" color="#4B5563" spaceAfter="0" if="Seller.Phone || Seller.Email">{{ Seller.Phone }}<if test="Seller.Phone &amp;&amp; Seller.Email"> · </if>{{ Seller.Email }}</p>
+          <p size="8.5" color="#4B5563" spaceAfter="0" if="Seller.TaxId">NPWP {{ Seller.TaxId }}</p>
+        </cell>
+        <cell>
+          <p size="22" bold="true" color="#0F766E" spaceAfter="4">INVOICE</p>
+          <p size="9" spaceAfter="0">No. <b>{{ Number }}</b></p>
+          <p size="9" spaceAfter="0">Tanggal {{ Date | date:"d MMMM yyyy" }}</p>
+          <p size="9" spaceAfter="0" if="DueDate">Jatuh tempo <b>{{ DueDate | date:"d MMMM yyyy" }}</b></p>
+        </cell>
+      </row>
+    </table>
+
+    <p size="8" bold="true" color="#6B7280" spaceAfter="2">DITAGIHKAN KEPADA</p>
+    <p bold="true" size="11" spaceAfter="1">{{ Customer.Name }}</p>
+    <p color="#4B5563" spaceAfter="0" if="Customer.Address">{{ Customer.Address }}</p>
+    <p color="#4B5563" spaceAfter="12" if="Customer.Phone || Customer.Email">{{ Customer.Phone }}<if test="Customer.Phone &amp;&amp; Customer.Email"> · </if>{{ Customer.Email }}</p>
+    <spacer height="6"/>
+
+    <table headerRows="1" headerBackground="#0F766E" zebra="#F9FAFB" border="#D1D5DB 0.75" grid="#E5E7EB 0.5" padding="6 5">
+      <column width="auto"/>
+      <column width="*"/>
+      <column width="auto" align="right"/>
+      <column width="auto" align="right"/>
+      <column width="auto" align="right"/>
+      <row><cell>No</cell><cell>Deskripsi</cell><cell>Qty</cell><cell>Harga</cell><cell>Jumlah</cell></row>
+      <foreach in="Items" as="item" index="i">
+        <row>
+          <cell>{{ i + 1 }}</cell>
+          <cell>
+            <p spaceAfter="0">{{ item.Name }}</p>
+            <p if="item.Description" size="8" color="#6B7280" spaceAfter="0">{{ item.Description }}</p>
+          </cell>
+          <cell>{{ item.Quantity | number }} {{ item.Unit }}</cell>
+          <cell>{{ item.Price | rupiah }}</cell>
+          <cell>{{ item.Quantity * item.Price | rupiah }}</cell>
+        </row>
+      </foreach>
+    </table>
+
+    <table border="none" grid="none" headerBackground="none" padding="3 5" keepWithNext="false">
+      <column width="*"/>
+      <column width="auto" align="right"/>
+      <column width="90" align="right"/>
+      <row><cell/><cell>Subtotal</cell><cell>{{ Subtotal | rupiah }}</cell></row>
+      <row if="Discount > 0"><cell/><cell>Diskon</cell><cell color="#B91C1C">-{{ Discount | rupiah }}</cell></row>
+      <row if="TaxRate > 0"><cell/><cell>{{ TaxName | default:"PPN" }} {{ TaxRate | percent }}</cell><cell>{{ Tax | rupiah }}</cell></row>
+      <row><cell/><cell bg="#ECFDF5"><b>Total</b></cell><cell bg="#ECFDF5" size="11"><b>{{ Total | rupiah }}</b></cell></row>
+    </table>
+
+    <p size="8.5" color="#4B5563" align="right" spaceBefore="2"><i>Terbilang: {{ Total | terbilang }} rupiah</i></p>
+
+    <if test="Bank">
+      <spacer height="10"/>
+      <p size="8" bold="true" color="#6B7280" spaceAfter="2">PEMBAYARAN</p>
+      <p spaceAfter="0">Transfer ke {{ Bank.Name }} · No. rekening <b>{{ Bank.AccountNumber }}</b></p>
+      <p spaceAfter="0">a.n. {{ Bank.AccountName }}</p>
+    </if>
+
+    <if test="Notes | count">
+      <spacer height="10"/>
+      <p size="8" bold="true" color="#6B7280" spaceAfter="2">CATATAN</p>
+      <list><foreach in="Notes" as="note"><item size="8.5">{{ note }}</item></foreach></list>
+    </if>
+  </section>
+</document>

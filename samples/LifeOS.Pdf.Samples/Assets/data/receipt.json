@@ -1,0 +1,10 @@
+{
+  "Number": "KW-2026-118",
+  "Date": "2026-11-13",
+  "City": "Jakarta",
+  "ReceivedFrom": "Budi Santoso",
+  "Amount": 2750000,
+  "For": "Pembayaran sewa ruang kerja bulan November 2026 (Unit 3B)",
+  "Organization": { "Name": "Koperasi Ruang Bersama", "Address": "Jl. Kenanga No. 7, Jakarta Pusat", "Logo": "logo" },
+  "Receiver": { "Name": "Siti Rahmawati", "Title": "Bendahara" }
+}

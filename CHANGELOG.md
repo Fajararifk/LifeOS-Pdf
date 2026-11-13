@@ -3,6 +3,26 @@
 Format: [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 Before v1.0, a minor version may contain breaking changes (always listed here).
 
+## [0.4.0] — Phase 3: Report templates
+
+### Added
+- `LifeOS.Pdf.Templates.PdfTemplate`: XML report templates filled with C# objects or JSON
+  (`Load`, `Parse`, `FromStream`, `Bind` → `FlowDocument`, `Render` → `PdfDocument`).
+  - Every layout feature as markup: sections, header/footer, headings, paragraphs with inline
+    styles, lists, tables (spans, repeating header, zebra), images, lines, page fields.
+  - `{{ … }}` placeholders with paths, arithmetic, comparisons, logic and filters; `foreach`,
+    `if`/`else`, `set` anywhere (blocks, rows, cells, list items, inside paragraphs).
+  - Filters: rupiah, currency, number, percent, round, date, terbilang, words, upper, lower,
+    title, default, join, count, sum, sumproduct, avg, min, max, first, last, sort, sortdesc,
+    where, groupby.
+  - Errors as `TemplateException` with line and column; optional strict mode for missing data.
+  - Safe for untrusted templates: no DTD/XXE, file paths confined to the template folder,
+    no method calls.
+- `BuiltInTemplates`: invoice, receipt (kwitansi), payslip, monthly finance report, certificate.
+- `TemplateData.FromJson`: dependency-free JSON parser (exact decimals, line/column errors).
+- `TextFormats`: Rupiah, number, percent, date (Indonesian & English) and number words
+  (Indonesian *terbilang*, English) that do not depend on the machine's culture.
+
 ## [0.3.0] — Phase 2: Layout engine
 
 ### Added

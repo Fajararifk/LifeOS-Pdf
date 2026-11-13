@@ -1,0 +1,32 @@
+{
+  "Number": "INV-2026-0042",
+  "Date": "2026-11-13",
+  "DueDate": "2026-11-27",
+  "Seller": {
+    "Name": "Fajar Digital Studio",
+    "Address": "Jl. Melati No. 12, Kebayoran Baru, Jakarta Selatan 12160",
+    "Phone": "+62 812 3456 7890",
+    "Email": "halo@fajardigital.id",
+    "TaxId": "01.234.567.8-901.000",
+    "Logo": "logo"
+  },
+  "Customer": {
+    "Name": "PT Maju Bersama Sejahtera",
+    "Address": "Gedung Graha Niaga Lt. 8, Jl. Jend. Sudirman Kav. 58, Jakarta 12190",
+    "Email": "finance@majubersama.co.id"
+  },
+  "Items": [
+    { "Name": "Pengembangan modul laporan PDF", "Description": "Layout engine, template invoice & slip gaji", "Quantity": 40, "Unit": "jam", "Price": 350000 },
+    { "Name": "Integrasi API LifeOS", "Description": "Endpoint export PDF untuk modul Finance", "Quantity": 16, "Unit": "jam", "Price": 350000 },
+    { "Name": "Lisensi font komersial", "Quantity": 1, "Unit": "paket", "Price": 1250000 },
+    { "Name": "Hosting & domain (1 tahun)", "Quantity": 1, "Unit": "tahun", "Price": 1800000 }
+  ],
+  "Discount": 1000000,
+  "TaxRate": 0.11,
+  "TaxName": "PPN",
+  "Bank": { "Name": "Bank Central Asia", "AccountNumber": "123 456 7890", "AccountName": "Fajar Digital Studio" },
+  "Notes": [
+    "Pembayaran paling lambat 14 hari setelah tanggal invoice.",
+    "Mohon cantumkan nomor invoice pada berita transfer."
+  ]
+}

@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  LifeOS.Pdf built-in template: monthly finance report (laporan keuangan bulanan).
+  Data: Owner, Month ("2026-11"), GeneratedAt (date),
+        Income[{Date, Category, Note, Amount}], Expenses[{Date, Category, Note, Amount}],
+        Budgets[{Category, Amount}] (optional), Notes[string] (optional).
+  Dates are "YYYY-MM-DD" strings (as stored by LifeOS) or DateTime values.
+-->
+<document title="Laporan Keuangan {{ Month | date:'MMMM yyyy' }}" author="{{ Owner }}" subject="Ringkasan pemasukan dan pengeluaran">
+  <styles>
+    <normal family="helvetica" size="9.5" color="#1F2937"/>
+    <heading level="1" size="20" color="#0F766E"/>
+    <heading level="2" size="13" color="#0F766E" spaceBefore="14"/>
+    <tableHeader bold="true"/>
+  </styles>
+
+  <set name="TotalIncome" value="Income | sum:'Amount'"/>
+  <set name="TotalExpense" value="Expenses | sum:'Amount'"/>
+  <set name="Net" value="TotalIncome - TotalExpense"/>
+  <set name="SavingRate" value="Net / TotalIncome"/>
+
+  <section size="A4" margin="18mm 18mm 15mm 18mm" differentFirstPage="true">
+    <header>
+      <table border="none" grid="none" headerBackground="none" padding="0" spaceAfter="2">
+        <column width="*"/>
+        <column width="auto" align="right"/>
+        <row><cell size="8" bold="true" color="#0F766E">{{ Owner }}</cell><cell size="8" color="#6B7280">Laporan Keuangan · {{ Month | date:"MMMM yyyy" }}</cell></row>
+      </table>
+      <hr spaceBefore="2" spaceAfter="0"/>
+    </header>
+    <footer><p align="center" size="7.5" color="#6B7280">Halaman <pageNumber/> dari <pageCount/></p></footer>
+    <firstFooter><p align="center" size="7.5" color="#6B7280">Halaman <pageNumber/> dari <pageCount/></p></firstFooter>
+
+    <p size="10" bold="true" color="#0F766E" spaceAfter="2">{{ Owner }}</p>
+    <h1>Laporan Keuangan {{ Month | date:"MMMM yyyy" }}</h1>
+    <p size="8.5" color="#6B7280">Dibuat {{ GeneratedAt | date:"d MMMM yyyy" }} · {{ Income | count }} pemasukan · {{ Expenses | count }} pengeluaran</p>
+
+    <table border="none" grid="#E5E7EB 0.5" headerBackground="none" padding="10 8" spaceBefore="8">
+      <column width="*"/>
+      <column width="*"/>
+      <column width="*"/>
+      <column width="*"/>
+      <row>
+        <cell bg="#F0FDFA"><p size="8" color="#6B7280" spaceAfter="2">PEMASUKAN</p><p size="13" bold="true" color="#047857" spaceAfter="0">{{ TotalIncome | rupiah }}</p></cell>
+        <cell bg="#FEF2F2"><p size="8" color="#6B7280" spaceAfter="2">PENGELUARAN</p><p size="13" bold="true" color="#B91C1C" spaceAfter="0">{{ TotalExpense | rupiah }}</p></cell>
+        <cell bg="#F9FAFB"><p size="8" color="#6B7280" spaceAfter="2">SELISIH</p><p size="13" bold="true" spaceAfter="0">{{ Net | rupiah }}</p></cell>
+        <cell bg="#F9FAFB"><p size="8" color="#6B7280" spaceAfter="2">SAVING RATE</p><p size="13" bold="true" spaceAfter="0">{{ SavingRate | percent:1 | default:"—" }}</p></cell>
+      </row>
+    </table>
+
+    <h2>Pengeluaran per kategori</h2>
+    <table headerRows="1" zebra="#F9FAFB" padding="5 4">
+      <column width="*"/>
+      <column width="auto" align="right"/>
+      <column width="70" align="right"/>
+      <column width="100" align="right"/>
+      <column width="100" align="right" if="Budgets | count"/>
+      <row>
+        <cell>Kategori</cell><cell>Transaksi</cell><cell>Porsi</cell><cell>Jumlah</cell>
+        <cell if="Budgets | count">Anggaran</cell>
+      </row>
+      <foreach in="Expenses | groupby:'Category':'Amount' | sortdesc:'Total'" as="g">
+        <set name="Budget" value="Budgets | where:'Category':g.Key | sum:'Amount'"/>
+        <row>
+          <cell>{{ g.Key }}</cell>
+          <cell>{{ g.Count }}</cell>
+          <cell>{{ g.Total / TotalExpense | percent:1 }}</cell>
+          <cell if="Budget > 0 &amp;&amp; g.Total > Budget" color="#B91C1C" bold="true">{{ g.Total | rupiah }}</cell>
+          <else><cell>{{ g.Total | rupiah }}</cell></else>
+          <cell if="Budgets | count">{{ Budget | rupiah | default:"—" }}</cell>
+        </row>
+      </foreach>
+      <row bg="#F3F4F6"><cell colspan="3"><b>Total</b></cell><cell><b>{{ TotalExpense | rupiah }}</b></cell><cell if="Budgets | count"><b>{{ Budgets | sum:'Amount' | rupiah }}</b></cell></row>
+    </table>
+
+    <if test="Income | count">
+      <h2>Pemasukan</h2>
+      <table headerRows="1" zebra="#F9FAFB" padding="5 4">
+        <column width="auto"/>
+        <column width="auto"/>
+        <column width="*"/>
+        <column width="100" align="right"/>
+        <row><cell>Tanggal</cell><cell>Kategori</cell><cell>Catatan</cell><cell>Jumlah</cell></row>
+        <foreach in="Income | sort:'Date'" as="t">
+          <row><cell>{{ t.Date | date:"d MMM" }}</cell><cell>{{ t.Category }}</cell><cell>{{ t.Note }}</cell><cell>{{ t.Amount | rupiah }}</cell></row>
+        </foreach>
+      </table>
+    </if>
+
+    <h2>Daftar pengeluaran</h2>
+    <table headerRows="1" zebra="#F9FAFB" padding="5 4">
+      <column width="auto"/>
+      <column width="auto"/>
+      <column width="*"/>
+      <column width="100" align="right"/>
+      <row><cell>Tanggal</cell><cell>Kategori</cell><cell>Catatan</cell><cell>Jumlah</cell></row>
+      <foreach in="Expenses | sort:'Date'" as="t">
+        <row><cell>{{ t.Date | date:"d MMM" }}</cell><cell>{{ t.Category }}</cell><cell>{{ t.Note }}</cell><cell>{{ t.Amount | rupiah }}</cell></row>
+      </foreach>
+      <row if="!(Expenses | count)"><cell colspan="4"><i>Tidak ada pengeluaran bulan ini.</i></cell></row>
+    </table>
+
+    <if test="Notes | count">
+      <h2>Catatan</h2>
+      <list><foreach in="Notes" as="note"><item>{{ note }}</item></foreach></list>
+    </if>
+  </section>
+</document>

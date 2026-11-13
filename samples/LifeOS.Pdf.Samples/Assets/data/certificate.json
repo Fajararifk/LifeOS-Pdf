@@ -1,0 +1,15 @@
+{
+  "Number": "SRT/2026/XI/0042",
+  "Subtitle": "Penghargaan",
+  "RecipientName": "Fajar Arif",
+  "Role": "Pembicara",
+  "Event": ".NET Conf Indonesia 2026",
+  "Description": "Sesi \"Membangun library PDF dari nol dengan C#\", Jakarta, 13 November 2026",
+  "Date": "2026-11-13",
+  "City": "Jakarta",
+  "Organization": { "Name": "Komunitas .NET Indonesia", "Logo": "logo" },
+  "Signers": [
+    { "Name": "Dewi Lestari", "Title": "Ketua Panitia" },
+    { "Name": "Andi Wijaya", "Title": "Koordinator Komunitas" }
+  ]
+}

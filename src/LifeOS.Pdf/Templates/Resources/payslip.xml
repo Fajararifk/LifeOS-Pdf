@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  LifeOS.Pdf built-in template: payslip (slip gaji).
+  Data: Period ("2026-11"), PaymentDate, Company{Name, Address, Logo},
+        Employee{Name, Id, Position, Department, TaxId},
+        Earnings[{Name, Amount}], Deductions[{Name, Amount}],
+        Bank{Name, AccountNumber}, Notes[string].
+-->
+<document title="Slip Gaji {{ Employee.Name }} {{ Period | date:'MMMM yyyy' }}" author="{{ Company.Name }}">
+  <styles>
+    <normal family="helvetica" size="9.5" color="#1F2937"/>
+    <tableHeader bold="true" color="#0F766E"/>
+  </styles>
+
+  <set name="Gross" value="Earnings | sum:'Amount'"/>
+  <set name="TotalDeductions" value="Deductions | sum:'Amount'"/>
+  <set name="Net" value="Gross - TotalDeductions"/>
+
+  <section size="A4" margin="18mm">
+    <footer>
+      <p align="center" size="7.5" color="#6B7280">Dokumen ini dibuat secara elektronik dan sah tanpa tanda tangan.</p>
+    </footer>
+
+    <table border="none" grid="none" headerBackground="none" padding="0" spaceAfter="10">
+      <column width="*"/>
+      <column width="auto" align="right"/>
+      <row>
+        <cell>
+          <image if="Company.Logo" src="{{ Company.Logo }}" width="80" spaceAfter="4"/>
+          <p bold="true" size="12" spaceAfter="1">{{ Company.Name }}</p>
+          <p size="8.5" color="#6B7280" spaceAfter="0">{{ Company.Address }}</p>
+        </cell>
+        <cell>
+          <p size="18" bold="true" color="#0F766E" spaceAfter="2">SLIP GAJI</p>
+          <p size="9.5" spaceAfter="0">Periode <b>{{ Period | date:"MMMM yyyy" }}</b></p>
+          <p size="9" color="#6B7280" spaceAfter="0" if="PaymentDate">Dibayar {{ PaymentDate | date:"d MMMM yyyy" }}</p>
+        </cell>
+      </row>
+    </table>
+    <hr color="#0F766E" thickness="1"/>
+
+    <table border="none" grid="none" headerBackground="none" padding="2 0" spaceAfter="12">
+      <column width="90"/>
+      <column width="*"/>
+      <column width="90"/>
+      <column width="*"/>
+      <row>
+        <cell color="#6B7280">Nama</cell><cell><b>{{ Employee.Name }}</b></cell>
+        <cell color="#6B7280">NIK</cell><cell>{{ Employee.Id }}</cell>
+      </row>
+      <row>
+        <cell color="#6B7280">Jabatan</cell><cell>{{ Employee.Position }}</cell>
+        <cell color="#6B7280">Departemen</cell><cell>{{ Employee.Department }}</cell>
+      </row>
+      <row if="Employee.TaxId">
+        <cell color="#6B7280">NPWP</cell><cell colspan="3">{{ Employee.TaxId }}</cell>
+      </row>
+    </table>
+
+    <h3>Pendapatan</h3>
+    <table headerRows="1" headerBackground="#F0FDFA" zebra="#F9FAFB" padding="5 4">
+      <column width="*"/>
+      <column width="110" align="right"/>
+      <row><cell>Komponen</cell><cell>Jumlah</cell></row>
+      <foreach in="Earnings" as="e">
+        <row><cell>{{ e.Name }}</cell><cell>{{ e.Amount | rupiah }}</cell></row>
+      </foreach>
+      <row bg="#F3F4F6"><cell><b>Total pendapatan</b></cell><cell><b>{{ Gross | rupiah }}</b></cell></row>
+    </table>
+
+    <h3>Potongan</h3>
+    <table headerRows="1" headerBackground="#FEF2F2" zebra="#F9FAFB" padding="5 4">
+      <column width="*"/>
+      <column width="110" align="right"/>
+      <row><cell>Komponen</cell><cell>Jumlah</cell></row>
+      <foreach in="Deductions" as="d">
+        <row><cell>{{ d.Name }}</cell><cell>{{ d.Amount | rupiah }}</cell></row>
+      </foreach>
+      <row if="!(Deductions | count)"><cell colspan="2"><i>Tidak ada potongan.</i></cell></row>
+      <row bg="#F3F4F6"><cell><b>Total potongan</b></cell><cell><b>{{ TotalDeductions | rupiah }}</b></cell></row>
+    </table>
+
+    <table border="#0F766E 1.25" grid="none" headerBackground="none" padding="10 8" spaceBefore="12">
+      <column width="*"/>
+      <column width="auto" align="right"/>
+      <row bg="#ECFDF5">
+        <cell><p bold="true" size="11" spaceAfter="1">Gaji bersih (take home pay)</p><p size="8.5" color="#4B5563" spaceAfter="0"><i>{{ Net | terbilang }} rupiah</i></p></cell>
+        <cell valign="middle" size="16" bold="true" color="#0F766E">{{ Net | rupiah }}</cell>
+      </row>
+    </table>
+
+    <p if="Bank" spaceBefore="8" size="9">Ditransfer ke {{ Bank.Name }} · No. rekening {{ Bank.AccountNumber }}</p>
+
+    <if test="Notes | count">
+      <p size="8" bold="true" color="#6B7280" spaceBefore="8" spaceAfter="2">CATATAN</p>
+      <list><foreach in="Notes" as="note"><item size="8.5">{{ note }}</item></foreach></list>
+    </if>
+  </section>
+</document>

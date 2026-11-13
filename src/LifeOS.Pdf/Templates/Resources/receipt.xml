@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  LifeOS.Pdf built-in template: receipt (kwitansi), A5 landscape.
+  Data: Number, Date, City, ReceivedFrom, Amount, For,
+        Receiver{Name, Title, Signature (image, optional)}, Organization{Name, Address, Logo}.
+-->
+<document title="Kwitansi {{ Number }}" author="{{ Organization.Name }}">
+  <styles>
+    <normal family="helvetica" size="10" color="#1F2937"/>
+  </styles>
+  <section size="A5" orientation="landscape" margin="12mm">
+    <table border="#0F766E 1.5" grid="none" headerBackground="none" padding="16 14" spaceBefore="0" spaceAfter="0">
+      <column width="*"/>
+      <row>
+        <cell>
+          <table border="none" grid="none" headerBackground="none" padding="0" spaceAfter="10">
+            <column width="*"/>
+            <column width="auto" align="right"/>
+            <row>
+              <cell>
+                <image if="Organization.Logo" src="{{ Organization.Logo }}" width="60" spaceAfter="4"/>
+                <p bold="true" size="11" spaceAfter="0">{{ Organization.Name }}</p>
+                <p size="8" color="#6B7280" spaceAfter="0">{{ Organization.Address }}</p>
+              </cell>
+              <cell>
+                <p size="20" bold="true" color="#0F766E" spaceAfter="2">KWITANSI</p>
+                <p size="9" spaceAfter="0">No. <b>{{ Number }}</b></p>
+              </cell>
+            </row>
+          </table>
+          <hr color="#0F766E" thickness="0.75"/>
+          <table border="none" grid="none" headerBackground="none" padding="5 2" spaceAfter="8">
+            <column width="110"/>
+            <column width="*"/>
+            <row><cell color="#6B7280">Sudah terima dari</cell><cell><b>{{ ReceivedFrom }}</b></cell></row>
+            <row><cell color="#6B7280">Uang sejumlah</cell><cell bg="#F0FDFA"><i>{{ Amount | terbilang | title }} Rupiah</i></cell></row>
+            <row><cell color="#6B7280">Untuk pembayaran</cell><cell>{{ For }}</cell></row>
+          </table>
+          <table border="none" grid="none" headerBackground="none" padding="0" spaceAfter="0">
+            <column width="*"/>
+            <column width="190" align="center"/>
+            <row>
+              <cell valign="bottom">
+                <table width="190" border="#0F766E 1.25" grid="none" headerBackground="none" padding="8 10" spaceAfter="0">
+                  <column width="*"/>
+                  <row><cell size="16" bold="true">{{ Amount | rupiah }}</cell></row>
+                </table>
+              </cell>
+              <cell>
+                <p spaceAfter="2">{{ City }}<if test="City">, </if>{{ Date | date:"d MMMM yyyy" }}</p>
+                <p size="9" color="#6B7280" spaceAfter="4">{{ Receiver.Title | default:"Penerima" }}</p>
+                <image if="Receiver.Signature" src="{{ Receiver.Signature }}" width="90" align="center" spaceBefore="0" spaceAfter="0"/>
+                <spacer if="!Receiver.Signature" height="38"/>
+                <p bold="true" underline="true" spaceAfter="0">{{ Receiver.Name }}</p>
+              </cell>
+            </row>
+          </table>
+        </cell>
+      </row>
+    </table>
+  </section>
+</document>

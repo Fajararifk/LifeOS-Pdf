@@ -60,6 +60,9 @@ namespace LifeOS.Pdf.Samples
             var reportPath = Path.Combine(outputDir, "report.pdf");
             ReportSample.Build(Path.Combine(AppContext.BaseDirectory, "Assets")).Save(reportPath);
             Console.WriteLine("Wrote " + reportPath + " (" + new FileInfo(reportPath).Length + " bytes)");
+
+            // Templates (Fase 3): every built-in template with sample JSON data.
+            TemplatesSample.Run(Path.Combine(AppContext.BaseDirectory, "Assets"), outputDir);
             return 0;
         }
 

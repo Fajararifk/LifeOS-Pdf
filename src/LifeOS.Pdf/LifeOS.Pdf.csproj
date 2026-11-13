@@ -16,4 +16,9 @@
     <InternalsVisibleTo Include="LifeOS.Pdf.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Built-in report templates, loaded by BuiltInTemplates. -->
+    <EmbeddedResource Include="Templates\Resources\*.xml" LogicalName="LifeOS.Pdf.Templates.%(Filename)%(Extension)" />
+  </ItemGroup>
+
 </Project>

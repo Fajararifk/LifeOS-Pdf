@@ -58,7 +58,7 @@ nol tidak realistis (browser engine, OCR).
 | 3 | Membuat PDF + manipulasi dasar | 0 ✅ + 6 | Dari nol |
 | 4 | Buat, ekstrak teks, merge, split, isi form, enkripsi | 6, 7, 8, 9 | Dari nol |
 | 5 | Membuat & convert PDF (gambar↔PDF, PDF→teks/CSV, PDF/A) | 1 ✅ (gambar→PDF), 7, 10, 12 | Dari nol + integrasi render |
-| 6 | Laporan PDF dari template | 3 | Dari nol |
+| 6 | Laporan PDF dari template | 3 ✅ | Dari nol |
 | 7 | Gambar QR untuk ditempel ke PDF | 4 | Dari nol (vektor di PDF + PNG/SVG) |
 | 8 | Baca QR/barcode dari gambar | 10 | Integrasi: ZXing.Net (Apache-2.0) |
 | 9 | Ambil teks dari PDF hasil scan (OCR) | 10 | Integrasi: Tesseract (Apache-2.0) |
@@ -75,7 +75,7 @@ parser (merge, ekstrak, form) menyusul, lalu integrasi engine eksternal di akhir
 | Buat PDF (teks, shape, gambar) | ✓ | ✓ | ✓ | Fase 0 ✅ |
 | Font TrueType + Unicode, PNG | ✓ | ✓ | ✓ | Fase 1 ✅ |
 | Layout engine (tabel, flow, header/footer) | MigraDoc | ✓ | ✓ | Fase 2 ✅ |
-| Laporan dari template | – | pdfHTML | ✓ | Fase 3 |
+| Laporan dari template | – | pdfHTML | ✓ | Fase 3 ✅ |
 | QR & barcode (buat) | – | ✓ | ✓ | Fase 4 |
 | Link, bookmark, lampiran | ✓ | ✓ | ✓ | Fase 5 |
 | Buka/merge/split/watermark/kompres | ✓ | ✓ | ✓ | Fase 6 |
@@ -124,7 +124,8 @@ SPESIFIKASI:
 - Header/footer per section, "Halaman X dari Y", margin, kolom ganda.
 - Deteksi overflow (konten tidak muat) dengan error yang jelas.
 
-## FASE 3 — Template Report (v0.4)  · use case 6
+## FASE 3 — Template Report ✅ (v0.4)  · use case 6
+Selesai. Referensi bahasa template (English): docs/templates.md.
 SPESIFIKASI:
 - Template laporan berbasis model C# dan JSON: placeholder `{{nama}}`,
   perulangan baris tabel, kondisi, subtotal/total, grup.

@@ -1,0 +1,19 @@
+{
+  "Period": "2026-11",
+  "PaymentDate": "2026-11-25",
+  "Company": { "Name": "PT Teknologi Nusantara", "Address": "Jl. Gatot Subroto No. 45, Bandung 40262", "Logo": "logo" },
+  "Employee": { "Name": "Fajar Arif", "Id": "EMP-0217", "Position": "Senior Software Engineer", "Department": "Engineering", "TaxId": "12.345.678.9-012.000" },
+  "Earnings": [
+    { "Name": "Gaji pokok", "Amount": 18500000 },
+    { "Name": "Tunjangan jabatan", "Amount": 2500000 },
+    { "Name": "Tunjangan transportasi", "Amount": 750000 },
+    { "Name": "Lembur (6 jam)", "Amount": 640000 }
+  ],
+  "Deductions": [
+    { "Name": "PPh 21", "Amount": 1385000 },
+    { "Name": "BPJS Kesehatan (1%)", "Amount": 120000 },
+    { "Name": "BPJS Ketenagakerjaan JHT (2%)", "Amount": 370000 },
+    { "Name": "BPJS Ketenagakerjaan JP (1%)", "Amount": 100423 }
+  ],
+  "Bank": { "Name": "Bank Mandiri", "AccountNumber": "130-00-1234567-8" }
+}

@@ -13,6 +13,7 @@ Adobe Acrobat and other PDF readers.
   <img src="docs/images/showcase-p1.png" width="380" alt="Sample page: text in the 14 standard fonts, shapes, JPEG image">
   <img src="docs/images/showcase-p3.png" width="380" alt="Sample page: embedded Unicode fonts, transparent PNG, rotation and watermark">
   <img src="docs/images/report-p1.png" width="380" alt="Multi-page finance report from the layout engine: justified paragraphs, lists, tables with row and column spans">
+  <img src="docs/images/template-invoice.png" width="380" alt="Invoice rendered from the built-in template with JSON data: line items, discount, VAT, total in words">
 </p>
 
 ## Installation
@@ -33,8 +34,8 @@ fonts need no font files; for TrueType fonts you ship the `.ttf` with your app.
 | 0 | Core writer: pages, text in the 14 standard fonts, shapes, JPEG, compression, metadata | ✅ v0.1 |
 | 1 | TrueType fonts with full Unicode, transparent PNG, image → PDF, rotation & opacity | ✅ v0.2 |
 | 2 | Layout engine: paragraphs, multi-page tables, header/footer, kerning, font fallback | ✅ v0.3 |
-| 3 | Reports from templates (invoice, receipt, payslip, finance report) | in progress |
-| 4 | QR codes & barcodes (vector, PNG, SVG) | planned |
+| 3 | Reports from templates (invoice, receipt, payslip, finance report, certificate) | ✅ v0.4 |
+| 4 | QR codes & barcodes (vector, PNG, SVG) | next |
 | 5 | Links, bookmarks, attachments, annotations | planned |
 | 6 | Open existing PDFs: merge, split, watermark, compress | planned |
 | 7 | Extract text, images and tables (CSV) | planned |
@@ -129,6 +130,44 @@ Also available: justified text, bulleted/numbered lists, column and row spans,
 images in the flow, multiple columns, keep-with-next, page breaks, a different
 header/footer on the first page. Full example:
 [ReportSample.cs](samples/LifeOS.Pdf.Samples/ReportSample.cs).
+
+### Reports from templates
+
+Keep the layout in an XML template that can be edited without recompiling, and fill it
+with a C# object or JSON. Five templates ship with the library: invoice, receipt
+(*kwitansi*), payslip, monthly finance report and certificate.
+
+```csharp
+using LifeOS.Pdf.Templates;
+
+// Built-in template + JSON data
+BuiltInTemplates.Invoice.Render(TemplateData.FromJson(json)).Save("invoice.pdf");
+
+// Your own template
+var template = PdfTemplate.Load("templates/order.xml");
+template.Render(new { Number = "ORD-17", Customer = customer, Items = items }).Save("order.pdf");
+```
+
+```xml
+<document title="Order {{ Number }}">
+  <section size="A4" margin="20mm">
+    <h1>Order {{ Number }}</h1>
+    <p>For <b>{{ Customer.Name }}</b> · {{ Date | date:"d MMMM yyyy" }}</p>
+    <table headerRows="1" zebra="#F9FAFB">
+      <column width="*"/><column width="auto" align="right"/><column width="90" align="right"/>
+      <row><cell>Item</cell><cell>Qty</cell><cell>Amount</cell></row>
+      <foreach in="Items" as="item">
+        <row><cell>{{ item.Name }}</cell><cell>{{ item.Quantity }}</cell><cell>{{ item.Quantity * item.Price | rupiah }}</cell></row>
+      </foreach>
+    </table>
+    <p align="right"><b>Total {{ Items | sumproduct:"Quantity":"Price" | rupiah }}</b></p>
+  </section>
+</document>
+```
+
+Loops, conditions, variables, grouping and sums, and Indonesian/English formatting of
+money, dates and numbers in words (*terbilang*) are built in. Full reference:
+[docs/templates.md](docs/templates.md).
 
 ### Images → PDF
 
