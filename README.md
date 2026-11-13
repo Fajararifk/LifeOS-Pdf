@@ -36,8 +36,8 @@ fonts need no font files; for TrueType fonts you ship the `.ttf` with your app.
 | 2 | Layout engine: paragraphs, multi-page tables, header/footer, kerning, font fallback | ✅ v0.3 |
 | 3 | Reports from templates (invoice, receipt, payslip, finance report, certificate) | ✅ v0.4 |
 | 4 | QR codes & barcodes (vector, PNG, SVG), QRIS | ✅ v0.5 |
-| 5 | Links, bookmarks, attachments, annotations | next |
-| 6 | Open existing PDFs: merge, split, watermark, compress | planned |
+| 5 | Links, bookmarks, table of contents, attachments, annotations | ✅ v0.6 |
+| 6 | Open existing PDFs: merge, split, watermark, compress | next |
 | 7 | Extract text, images and tables (CSV) | planned |
 | 8 | Forms: create, fill, flatten | planned |
 | 9 | Encryption & digital signatures | planned |
@@ -192,6 +192,37 @@ QR (versions 1–40, error correction L/M/Q/H), Code 128, Code 39, EAN-13, EAN-8
 ITF and ITF-14. Also available as `section.AddQrCode(...)`/`AddBarcode(...)` in the layout
 engine and as `<qrcode>`/`<barcode>` in templates; the built-in invoice shows a QRIS payment
 code when the data has `PaymentQr`.
+
+### Links, bookmarks, table of contents, attachments
+
+```csharp
+using LifeOS.Pdf.Navigation;
+
+// Layout engine: headings become bookmarks automatically
+var section = doc.AddSection();
+section.AddTableOfContents("Daftar Isi");          // dot leaders, page numbers, clickable
+section.AddHeading("Ringkasan").Anchor = "ringkasan";
+section.AddParagraph("Lihat ").AddLink("situs kami", "https://lifeos.app")
+       .AddText(" atau ").AddLink("ringkasan", "#ringkasan");
+doc.Attachments.Add("data.csv", csvBytes, "text/csv");
+
+// Low level
+page.AddLink(72, 700, 120, 14, "https://lifeos.app");
+page.AddLink(72, 720, 120, 14, PdfDestination.ToPage(pdf.Pages[3], top: 100));
+pdf.Outline.Add("Bab 1", PdfDestination.ToPage(pdf.Pages[0])).Add("1.1", PdfDestination.FitPage(pdf.Pages[1]));
+pdf.PageLabels.Add(0, PageLabelStyle.LowerRoman);   // i, ii, … then 1, 2, …
+pdf.PageLabels.Add(2, PageLabelStyle.Decimal);
+pdf.ViewerPreferences.PageLayout = PageLayout.TwoPageRight;
+
+// Annotations
+page.AddNote(400, 80, "Cek lagi angka ini", author: "Fajar");
+page.AddHighlight(72, 100, 200, 14, comment: "penting");
+page.AddStamp(350, 300, 160, 60, "LUNAS");
+```
+
+Links only accept `http`, `https`, `mailto` and `tel`. In templates: `<a href="…">`,
+`anchor="…"`, `<toc/>`, `<attachment src="data.csv"/>` and
+`<document pageMode="outlines" zoom="fitWidth">`.
 
 ### Images → PDF
 

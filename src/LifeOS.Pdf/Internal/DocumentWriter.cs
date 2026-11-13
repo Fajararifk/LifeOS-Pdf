@@ -98,6 +98,7 @@ namespace LifeOS.Pdf.Internal
             }
 
             var kids = new PdfArray();
+            var pageObjects = new Dictionary<PdfPage, PdfIndirectObject>();
             foreach (var page in document.Pages)
             {
                 var pageObj = New();
@@ -154,6 +155,18 @@ namespace LifeOS.Pdf.Internal
                     .Set("Resources", resources)
                     .Set("Contents", contentObj.Reference);
                 kids.Items.Add(pageObj.Reference);
+                pageObjects[page] = pageObj;
+            }
+
+            // Interactive features come after the pages so destinations can point to any page.
+            var interactive = new InteractiveWriter(document, pageObjects, New, fontObjects);
+            foreach (var page in document.Pages)
+            {
+                var annots = interactive.Annotations(page);
+                if (annots != null)
+                {
+                    ((PdfDictionary)pageObjects[page].Value!).Set("Annots", annots);
+                }
             }
 
             pagesRoot.Value = new PdfDictionary()
@@ -164,11 +177,7 @@ namespace LifeOS.Pdf.Internal
             var catalogDict = new PdfDictionary()
                 .Set("Type", "Catalog")
                 .Set("Pages", pagesRoot.Reference);
-            if (!string.IsNullOrEmpty(document.Info.Title))
-            {
-                // Show the title, not the file name, in the viewer's title bar.
-                catalogDict.Set("ViewerPreferences", new PdfDictionary().Set("DisplayDocTitle", PdfBoolean.True));
-            }
+            interactive.Complete(catalogDict);
 
             catalog.Value = catalogDict;
 

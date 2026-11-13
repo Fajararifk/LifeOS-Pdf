@@ -108,7 +108,7 @@ namespace LifeOS.Pdf.Tests
             var result = new List<string>();
             foreach (var obj in Objects)
             {
-                var m = Regex.Match(obj.Value, @"^<< /Type /Page /Parent .* /Contents (\d+) 0 R >>$");
+                var m = Regex.Match(obj.Value, @"^<< /Type /Page /Parent .* /Contents (\d+) 0 R( /Annots \[[^\]]*\])? >>$");
                 if (m.Success)
                 {
                     var data = StreamData(int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture));

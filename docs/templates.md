@@ -47,13 +47,15 @@ var invoice = BuiltInTemplates.Get(BuiltInTemplate.Invoice, options);
 ## Document structure
 
 ```xml
-<document title="Invoice {{ Number }}" author="{{ Seller.Name }}">
+<document title="Invoice {{ Number }}" author="{{ Seller.Name }}" pageMode="outlines" zoom="fitWidth">
   <styles>
     <font name="noto" regular="fonts/NotoSans-Regular.ttf" bold="fonts/NotoSans-Bold.ttf"/>
     <normal family="helvetica" size="10" color="#1F2937" fallback="noto"/>
     <heading level="1" size="20" color="#0F766E" spaceBefore="14" spaceAfter="6"/>
     <tableHeader bold="true"/>
+    <link color="#1D4ED8" underline="true"/>
   </styles>
+  <attachment name="data.json" content="{{ Json }}" mime="application/json"/>
   <section size="A4" orientation="portrait" margin="20mm" columns="1">
     <header>…</header>
     <footer><p align="center">Page <pageNumber/> of <pageCount/></p></footer>
@@ -66,10 +68,12 @@ var invoice = BuiltInTemplates.Get(BuiltInTemplate.Invoice, options);
 
 | Element | Attributes | Content |
 |---|---|---|
-| `document` | title, author, subject, keywords, creator | `styles`, `section` |
+| `document` | title, author, subject, keywords, creator, outline (`true`/`false`), pageMode (`default` `none` `outlines` `thumbnails` `attachments` `fullScreen`), pageLayout (`singlePage` `oneColumn` `twoColumnLeft` `twoColumnRight` `twoPageLeft` `twoPageRight`), zoom (`fitPage` `fitWidth` `125%`) | `styles`, `attachment`, `section` |
+| `attachment` | name, src (file) **or** content (text, UTF-8), mime, description | — |
 | `section` | size (`A3` `A4` `A5` `Letter` `Legal` or `210mm x 297mm`), orientation, margin, columns, columnGap, headerSpacing, footerSpacing, differentFirstPage | header/footer + blocks |
 | `header` `footer` `firstHeader` `firstFooter` | — | blocks |
-| `h1` `h2` `h3` `p` | paragraph + style attributes | inline |
+| `h1` `h2` `h3` `p` | paragraph + style attributes, anchor | inline |
+| `toc` | title (default "Daftar Isi", empty for none), maxLevel (1–3), dots, indent — section body only | — |
 | `list` | kind (`bullet` `numbered`), start, indent | `item` |
 | `item` | paragraph + style attributes | inline, nested `list` |
 | `table` | width, headerRows, zebra, headerBackground, border, grid, padding, spaceBefore, spaceAfter, keepWithNext + style | `column`, `row` |
@@ -84,6 +88,7 @@ var invoice = BuiltInTemplates.Get(BuiltInTemplate.Invoice, options);
 | `pagebreak` | — | — |
 | `b` `i` `u` `s` | — | inline |
 | `span` | style attributes | inline |
+| `a` | href (`https://…`, `mailto:…`, `tel:…` or `#anchor`) + style attributes | inline |
 | `br` `pageNumber` `pageCount` | (style for the two fields) | — |
 
 **Paragraph attributes:** align (`left` `center` `right` `justify`), spaceBefore,
@@ -98,6 +103,10 @@ a color, or `color width` (`#999 0.5`).
 
 Text directly inside a section, header, footer or cell becomes a paragraph. Template
 whitespace is collapsed like HTML; values inserted from data keep their own line breaks.
+
+Headings (`h1`–`h3`) become bookmarks unless `outline="false"`. `<a href="#name">` jumps to the
+paragraph with `anchor="name"`; a missing anchor is an error when saving. Only `http`,
+`https`, `mailto` and `tel` links are accepted.
 
 An empty `value` on `qrcode`/`barcode` draws nothing, like an empty image `src`.
 

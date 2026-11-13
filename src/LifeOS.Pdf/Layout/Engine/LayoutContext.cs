@@ -41,6 +41,12 @@ namespace LifeOS.Pdf.Layout.Engine
         public string FieldText(InlineKind kind) =>
             (kind == InlineKind.PageNumber ? PageNumber : PageCount).ToString(CultureInfo.InvariantCulture);
 
+        /// <summary>Headings of the body, in document order (for the table of contents).</summary>
+        public List<HeadingInfo> Headings { get; } = new List<HeadingInfo>();
+
+        /// <summary>Page number of each heading from the previous layout pass.</summary>
+        public Dictionary<Paragraph, int> HeadingPages { get; } = new Dictionary<Paragraph, int>();
+
         public PdfFont Font(PdfFontFace face, double size)
         {
             var key = (face, size);
@@ -54,11 +60,29 @@ namespace LifeOS.Pdf.Layout.Engine
         }
     }
 
+    /// <summary>A heading that can appear in the table of contents.</summary>
+    internal sealed class HeadingInfo
+    {
+        public HeadingInfo(Paragraph paragraph, string name)
+        {
+            Paragraph = paragraph;
+            Name = name;
+        }
+
+        public Paragraph Paragraph { get; }
+
+        public int Level => Paragraph.HeadingLevel;
+
+        /// <summary>Named destination the table of contents links to.</summary>
+        public string Name { get; }
+    }
+
     /// <summary>A text style with every property resolved.</summary>
     internal sealed class ResolvedStyle
     {
-        public ResolvedStyle(TextStyle s)
+        public ResolvedStyle(TextStyle s, string? link = null)
         {
+            Link = link;
             Family = s.Family ?? FontFamily.Helvetica;
             Fallbacks = new List<FontFamily>(s.Fallbacks);
             Size = s.Size ?? 10;
@@ -90,6 +114,9 @@ namespace LifeOS.Pdf.Layout.Engine
         public bool Kerning { get; }
 
         public PdfFontFace PrimaryFace { get; }
+
+        /// <summary>Link target of the text ("#name" or a URI), or null.</summary>
+        public string? Link { get; }
 
         /// <summary>Font fallback (requirement FR-07): the first family that has the glyph.</summary>
         public PdfFontFace FaceFor(int codePoint)

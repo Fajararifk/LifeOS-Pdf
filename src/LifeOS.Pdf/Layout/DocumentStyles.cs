@@ -27,6 +27,12 @@ namespace LifeOS.Pdf.Layout
         /// <summary>Style of table header rows (merged over Normal and the table's style).</summary>
         public TextStyle TableHeader { get; set; } = new TextStyle { Bold = true };
 
+        /// <summary>Style of link text added with <see cref="Paragraph.AddLink"/> (blue, underlined).</summary>
+        public TextStyle Link { get; set; } = new TextStyle { Color = PdfColor.FromHex("#1D4ED8"), Underline = true };
+
+        /// <summary>Style of the table of contents title.</summary>
+        public TextStyle TableOfContentsTitle { get; set; } = new TextStyle { Size = 16, Bold = true };
+
         internal HeadingStyle Heading(int level) => level == 1 ? Heading1 : level == 2 ? Heading2 : Heading3;
     }
 }

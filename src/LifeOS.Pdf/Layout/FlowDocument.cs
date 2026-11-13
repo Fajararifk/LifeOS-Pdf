@@ -26,6 +26,15 @@ namespace LifeOS.Pdf.Layout
 
         public IReadOnlyList<Section> Sections => _sections;
 
+        /// <summary>Create bookmarks from the headings (level 1–3). Default true.</summary>
+        public bool GenerateOutline { get; set; } = true;
+
+        /// <summary>How the document is presented when opened. With bookmarks, the outline panel opens by default.</summary>
+        public Navigation.PdfViewerPreferences ViewerPreferences { get; } = new Navigation.PdfViewerPreferences();
+
+        /// <summary>Files embedded in the rendered PDF.</summary>
+        public Attachments.PdfAttachmentCollection Attachments { get; } = new Attachments.PdfAttachmentCollection();
+
         /// <summary>Adds a section (new page). Without a setup, A4 portrait with 2 cm margins is used.</summary>
         public Section AddSection(PageSetup? setup = null)
         {
@@ -44,6 +53,8 @@ namespace LifeOS.Pdf.Layout
 
             var pdf = new PdfDocument();
             CopyInfo(pdf.Info);
+            ViewerPreferences.CopyTo(pdf.ViewerPreferences);
+            Attachments.CopyTo(pdf.Attachments);
             new Renderer(this).Render(pdf);
             return pdf;
         }

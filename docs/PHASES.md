@@ -77,7 +77,7 @@ parser (merge, ekstrak, form) menyusul, lalu integrasi engine eksternal di akhir
 | Layout engine (tabel, flow, header/footer) | MigraDoc | ✓ | ✓ | Fase 2 ✅ |
 | Laporan dari template | – | pdfHTML | ✓ | Fase 3 ✅ |
 | QR & barcode (buat) | – | ✓ | ✓ | Fase 4 ✅ |
-| Link, bookmark, lampiran | ✓ | ✓ | ✓ | Fase 5 |
+| Link, bookmark, lampiran | ✓ | ✓ | ✓ | Fase 5 ✅ |
 | Buka/merge/split/watermark/kompres | ✓ | ✓ | ✓ | Fase 6 |
 | Ekstrak teks/gambar/tabel, redaksi | – | ✓ | ✓ | Fase 7 |
 | Form (AcroForm) | sebagian | ✓ | ✓ | Fase 8 |
@@ -143,7 +143,9 @@ SPESIFIKASI:
 - Output: vektor langsung di halaman PDF (tajam di semua zoom), PNG, SVG.
 - QR dengan logo di tengah (ECC H), warna kustom, quiet zone.
 
-## FASE 5 — Navigasi & Interaktif (v0.6)
+## FASE 5 — Navigasi & Interaktif ✅ (v0.6)
+Selesai (link, bookmark otomatis dari heading, daftar isi, named destination, page label,
+viewer preferences, lampiran, anotasi note/highlight/stamp). Lihat design-fase5.md & qa-fase5.md.
 SPESIFIKASI:
 - Hyperlink URI, link internal ke halaman/posisi, named destination.
 - Bookmark/outline bertingkat (otomatis dari heading layout engine), page label.

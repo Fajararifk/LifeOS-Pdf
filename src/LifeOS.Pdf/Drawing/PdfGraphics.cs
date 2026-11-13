@@ -31,6 +31,8 @@ namespace LifeOS.Pdf.Drawing
 
         internal string Content => _ops.ToString();
 
+        internal PdfPage Page => _page;
+
         /// <summary>Draws a straight line.</summary>
         public void DrawLine(PdfPen pen, double x1, double y1, double x2, double y2)
         {

@@ -86,6 +86,9 @@ jobs:
             --expect-code "INV-2026-0042" --expect-code "LIFEOS-42X" --expect-code "8991234567891" \
             --expect-code "89912348" --expect-code "036000291452" --expect-code "18991234567898"
           python tools/validate_pdf.py out/*/ticket.pdf --expect-code "TICKET-2026-000731"
+          python tools/validate_pdf.py out/*/navigation.pdf --expect-text "Daftar Isi" \
+            --expect-outline "1. Pendahuluan" --expect-outline "2.3 Laporan" --expect-outline "Anotasi" \
+            --expect-link "https://github.com/Fajararifk/LifeOS-Pdf" --expect-attachment "pengeluaran.csv" --expect-attachment "ringkasan.json"
 
       - uses: actions/upload-artifact@v4
         with:

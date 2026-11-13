@@ -51,6 +51,10 @@ namespace LifeOS.Pdf.Templates.Markup
                 {
                     BindStyles(node, s);
                 }
+                else if (node.Name == "attachment")
+                {
+                    BindAttachment(node, s);
+                }
                 else
                 {
                     BindSection(node, s);
@@ -65,6 +69,7 @@ namespace LifeOS.Pdf.Templates.Markup
                 }
             }
 
+            BindViewer(root, scope);
             if (_doc.Sections.Count == 0)
             {
                 throw root.Error("The template produced no <section>. Add at least one <section> (check its if=\"…\" conditions).");
@@ -164,6 +169,9 @@ namespace LifeOS.Pdf.Templates.Markup
                     case "tableHeader":
                         _doc.Styles.TableHeader = _doc.Styles.TableHeader.Merge(Style(node, s));
                         break;
+                    case "link":
+                        _doc.Styles.Link = _doc.Styles.Link.Merge(Style(node, s));
+                        break;
                     case "heading":
                         var level = (int)(Number(node, "level", s) ?? 1);
                         if (level < 1 || level > 3)
@@ -178,6 +186,99 @@ namespace LifeOS.Pdf.Templates.Markup
                         break;
                 }
             });
+        }
+
+        private void BindViewer(TemplateNode root, Scope scope)
+        {
+            _doc.GenerateOutline = Bool(root, "outline", scope) ?? true;
+            var prefs = _doc.ViewerPreferences;
+            var mode = Attr(root, "pageMode", scope);
+            if (!string.IsNullOrEmpty(mode))
+            {
+                prefs.PageMode = ParseEnum<Navigation.PageMode>(root, "pageMode", mode!);
+            }
+
+            var layout = Attr(root, "pageLayout", scope);
+            if (!string.IsNullOrEmpty(layout))
+            {
+                prefs.PageLayout = ParseEnum<Navigation.PageLayout>(root, "pageLayout", layout!);
+            }
+
+            var zoom = Attr(root, "zoom", scope);
+            if (string.IsNullOrEmpty(zoom))
+            {
+                return;
+            }
+
+            switch (zoom!.ToLowerInvariant())
+            {
+                case "fitpage":
+                case "page":
+                    prefs.InitialZoom = Navigation.InitialZoom.FitPage;
+                    break;
+                case "fitwidth":
+                case "width":
+                    prefs.InitialZoom = Navigation.InitialZoom.FitWidth;
+                    break;
+                default:
+                    var number = zoom.TrimEnd('%');
+                    if (!double.TryParse(number, NumberStyles.Float, CultureInfo.InvariantCulture, out var percent) || percent < 10 || percent > 6400)
+                    {
+                        throw root.Error("zoom must be fitPage, fitWidth or a percentage between 10 and 6400 (e.g. 125%), not '" + zoom + "'.");
+                    }
+
+                    prefs.InitialZoom = Navigation.InitialZoom.Percent;
+                    prefs.ZoomPercent = percent;
+                    break;
+            }
+        }
+
+        private void BindAttachment(TemplateNode node, Scope scope)
+        {
+            var src = Attr(node, "src", scope);
+            var content = node.Attributes.TryGetValue("content", out var c) ? c.Evaluate(scope) : null;
+            if ((src == null) == (content == null))
+            {
+                throw node.Error("<attachment> needs either src=\"file\" or content=\"text\" (not both).");
+            }
+
+            var name = Attr(node, "name", scope);
+            if (string.IsNullOrEmpty(name))
+            {
+                name = src != null ? Path.GetFileName(src) : null;
+            }
+
+            if (string.IsNullOrEmpty(name))
+            {
+                throw node.Error("<attachment content=\"…\"> needs name=\"file.txt\".");
+            }
+
+            byte[] data;
+            if (src != null)
+            {
+                var full = ResolvePath(node, src);
+                try
+                {
+                    data = File.ReadAllBytes(full);
+                }
+                catch (IOException ex)
+                {
+                    throw node.Error("Cannot read attachment '" + src + "': " + ex.Message);
+                }
+            }
+            else
+            {
+                data = new UTF8Encoding(false).GetBytes(content!);
+            }
+
+            try
+            {
+                _doc.Attachments.Add(name!, data, Attr(node, "mime", scope), Attr(node, "description", scope));
+            }
+            catch (ArgumentException ex)
+            {
+                throw node.Error(ex.Message);
+            }
         }
 
         private void BindSection(TemplateNode node, Scope scope)
@@ -320,6 +421,19 @@ namespace LifeOS.Pdf.Templates.Markup
                     }
 
                     ApplyParagraphFormat(node, scope, p.Format);
+                    var anchor = Attr(node, "anchor", scope);
+                    if (!string.IsNullOrEmpty(anchor))
+                    {
+                        try
+                        {
+                            p.Anchor = anchor;
+                        }
+                        catch (ArgumentException ex)
+                        {
+                            throw node.Error(ex.Message);
+                        }
+                    }
+
                     var builder = new InlineBuilder(this);
                     var style = Combine(defaults.Style, Style(node, scope));
                     Each(node.Children, scope, (child, s) => builder.Visit(child, s, style));
@@ -352,6 +466,28 @@ namespace LifeOS.Pdf.Templates.Markup
                 case "spacer":
                     container.AddSpacer(Length(node, "height", scope) ?? 12);
                     break;
+                case "toc":
+                {
+                    var level = (int)(Number(node, "maxLevel", scope) ?? 3);
+                    if (level < 1 || level > 3)
+                    {
+                        throw node.Error("maxLevel must be 1, 2 or 3.");
+                    }
+
+                    var title = node.Attributes.ContainsKey("title") ? Attr(node, "title", scope) : "Daftar Isi";
+                    try
+                    {
+                        var toc = container.AddTableOfContents(string.IsNullOrEmpty(title) ? null : title, level);
+                        toc.DotLeaders = Bool(node, "dots", scope) ?? true;
+                        toc.LevelIndent = Length(node, "indent", scope) ?? toc.LevelIndent;
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        throw node.Error(ex.Message);
+                    }
+
+                    break;
+                }
                 case "pagebreak":
                     try
                     {
@@ -634,7 +770,7 @@ namespace LifeOS.Pdf.Templates.Markup
         // ------------------------------------------------------------------ inline content
 
         private static bool IsInline(string name) =>
-            name == "b" || name == "i" || name == "u" || name == "s" || name == "span" || name == "br" || name == "pageNumber" || name == "pageCount";
+            name == "b" || name == "i" || name == "u" || name == "s" || name == "span" || name == "a" || name == "br" || name == "pageNumber" || name == "pageCount";
 
         /// <summary>
         /// Collects text runs for one paragraph. Template whitespace is collapsed like HTML
@@ -646,6 +782,7 @@ namespace LifeOS.Pdf.Templates.Markup
             private readonly Binder _binder;
             private readonly List<Segment> _segments = new List<Segment>();
             private bool _lastWasSpace = true;
+            private string? _link;
 
             public InlineBuilder(Binder binder)
             {
@@ -697,6 +834,32 @@ namespace LifeOS.Pdf.Templates.Markup
                     case "u": childStyle = Combine(style, new TextStyle { Underline = true }); break;
                     case "s": childStyle = Combine(style, new TextStyle { Strikethrough = true }); break;
                     case "span": childStyle = Combine(style, _binder.Style(node, scope)); break;
+                    case "a":
+                    {
+                        var href = _binder.Attr(node, "href", scope);
+                        if (string.IsNullOrEmpty(href))
+                        {
+                            throw node.Error("<a> needs href=\"https://…\" or href=\"#anchor\".");
+                        }
+
+                        string target;
+                        try
+                        {
+                            target = Paragraph.NormalizeTarget(href!);
+                        }
+                        catch (ArgumentException ex)
+                        {
+                            throw node.Error(ex.Message);
+                        }
+
+                        var outer = _link;
+                        _link = target;
+                        var linkStyle = Combine(style, _binder.Style(node, scope));
+                        _binder.Each(node.Children, scope, (child, s) => Visit(child, s, linkStyle));
+                        _link = outer;
+                        return;
+                    }
+
                     default: throw node.Error("<" + node.Name + "> is a block element and cannot be used inside a paragraph.");
                 }
 
@@ -711,7 +874,11 @@ namespace LifeOS.Pdf.Templates.Markup
                     switch (s.Kind)
                     {
                         case SegmentKind.Text:
-                            if (s.Text.Length > 0)
+                            if (s.Text.Length > 0 && s.Link != null)
+                            {
+                                p.AddLink(s.Text, s.Link, s.Style);
+                            }
+                            else if (s.Text.Length > 0)
                             {
                                 p.AddText(s.Text, s.Style);
                             }
@@ -742,7 +909,7 @@ namespace LifeOS.Pdf.Templates.Markup
                     return;
                 }
 
-                _segments.Add(new Segment(SegmentKind.Text, text, style));
+                _segments.Add(new Segment(SegmentKind.Text, text, style, _link));
                 _lastWasSpace = text.EndsWith(" ", StringComparison.Ordinal) || text.EndsWith("\n", StringComparison.Ordinal);
             }
 
@@ -757,7 +924,7 @@ namespace LifeOS.Pdf.Templates.Markup
                     }
 
                     var trimmed = s.Text.TrimEnd(' ');
-                    _segments[i] = new Segment(SegmentKind.Text, trimmed, s.Style);
+                    _segments[i] = new Segment(SegmentKind.Text, trimmed, s.Style, s.Link);
                     if (trimmed.Length > 0)
                     {
                         return;
@@ -775,12 +942,15 @@ namespace LifeOS.Pdf.Templates.Markup
 
             private readonly struct Segment
             {
-                public Segment(SegmentKind kind, string text, TextStyle? style)
+                public Segment(SegmentKind kind, string text, TextStyle? style, string? link = null)
                 {
                     Kind = kind;
                     Text = text;
                     Style = style;
+                    Link = link;
                 }
+
+                public string? Link { get; }
 
                 public SegmentKind Kind { get; }
 

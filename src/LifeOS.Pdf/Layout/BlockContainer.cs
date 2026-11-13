@@ -126,6 +126,22 @@ namespace LifeOS.Pdf.Layout
             return block;
         }
 
+        /// <summary>
+        /// Adds a table of contents listing headings up to <paramref name="maxLevel"/> with dot leaders,
+        /// page numbers and clickable entries. Only allowed in a section body.
+        /// </summary>
+        public TableOfContentsBlock AddTableOfContents(string? title = "Contents", int maxLevel = 3)
+        {
+            if (!AllowsPageBreaks)
+            {
+                throw new InvalidOperationException("A table of contents is only allowed in a section body, not in headers, footers or table cells.");
+            }
+
+            var block = new TableOfContentsBlock(title, maxLevel);
+            BlockList.Add(block);
+            return block;
+        }
+
         /// <summary>Starts a new page. Only allowed in a section body.</summary>
         public void AddPageBreak()
         {

@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using LifeOS.Pdf.Attachments;
 using LifeOS.Pdf.Internal;
+using LifeOS.Pdf.Navigation;
 
 namespace LifeOS.Pdf
 {
@@ -22,6 +24,21 @@ namespace LifeOS.Pdf
         public PdfDocumentInfo Info { get; } = new PdfDocumentInfo();
 
         public IReadOnlyList<PdfPage> Pages => _pages;
+
+        /// <summary>Bookmarks shown in the viewer's outline panel.</summary>
+        public PdfOutline Outline { get; } = new PdfOutline();
+
+        /// <summary>Named destinations, the targets of <see cref="PdfDestination.Named"/> links.</summary>
+        public IDictionary<string, PdfDestination> NamedDestinations { get; } = new SortedDictionary<string, PdfDestination>(StringComparer.Ordinal);
+
+        /// <summary>Page numbers shown by the viewer (i, ii, 1, 2 …).</summary>
+        public PdfPageLabels PageLabels { get; } = new PdfPageLabels();
+
+        /// <summary>How the document is presented when opened.</summary>
+        public PdfViewerPreferences ViewerPreferences { get; } = new PdfViewerPreferences();
+
+        /// <summary>Files embedded in the document.</summary>
+        public PdfAttachmentCollection Attachments { get; } = new PdfAttachmentCollection();
 
         internal ResourceRegistry Resources { get; } = new ResourceRegistry();
 

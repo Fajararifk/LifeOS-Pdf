@@ -66,6 +66,9 @@ namespace LifeOS.Pdf.Samples
 
             // QR & barcodes (Fase 4).
             BarcodesSample.Run(Path.Combine(AppContext.BaseDirectory, "Assets"), outputDir);
+
+            // Navigation & interactive features (Fase 5).
+            NavigationSample.Run(outputDir);
             return 0;
         }
 

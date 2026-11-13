@@ -3,6 +3,31 @@
 Format: [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 Before v1.0, a minor version may contain breaking changes (always listed here).
 
+## [0.6.0] — Phase 5: Navigation & interactive features
+
+### Added
+- Links: `PdfPage.AddLink(x, y, w, h, uri)` (http, https, mailto, tel only — `javascript:`
+  and other schemes are refused) and `AddLink(…, PdfDestination)` to a page/position or a
+  named destination. `PdfDestination.ToPage/FitPage/FitWidth/Named`.
+- `PdfDocument.Outline`: nested bookmarks with open/closed state, bold/italic and color.
+- `PdfDocument.NamedDestinations`, `PageLabels` (decimal, roman, letters, prefix, start number),
+  `ViewerPreferences` (page mode, page layout, initial zoom/page, hide toolbar/menubar, …).
+- `PdfDocument.Attachments`: embedded files with MIME type, description, size and MD5 checksum.
+- Annotations with their own appearance streams (identical in every viewer):
+  `AddNote` (sticky note), `AddHighlight`, `AddStamp` ("LUNAS", "DRAFT", …).
+- Layout engine: `Paragraph.AddLink(text, "https://…" | "#anchor")`, `Paragraph.Anchor`,
+  bookmarks generated from headings (`FlowDocument.GenerateOutline`, default on),
+  `AddTableOfContents(title, maxLevel)` with dot leaders, page numbers and clickable entries,
+  `DocumentStyles.Link`, `FlowDocument.ViewerPreferences` and `Attachments`.
+- Templates: `<a href>`, `anchor` on `p`/`h1`–`h3`, `<toc>`, `<attachment>`,
+  `<styles><link/>`, and `outline`, `pageMode`, `pageLayout`, `zoom` on `<document>`.
+- `tools/validate_pdf.py`: `--expect-outline`, `--expect-link`, `--expect-attachment`; bookmarks
+  must resolve to a page and links to defined named destinations.
+
+### Changed
+- A document with bookmarks opens with the bookmark panel (`/PageMode /UseOutlines`) unless
+  `ViewerPreferences.PageMode` says otherwise.
+
 ## [0.5.0] — Phase 4: QR codes & barcodes
 
 ### Added

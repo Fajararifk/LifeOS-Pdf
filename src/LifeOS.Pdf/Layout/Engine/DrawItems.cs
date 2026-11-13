@@ -185,6 +185,77 @@ namespace LifeOS.Pdf.Layout.Engine
         }
     }
 
+    /// <summary>A clickable area: "#name" jumps to an anchor, anything else is a web address.</summary>
+    internal sealed class LinkItem : DrawItem
+    {
+        public LinkItem(string target, double x, double y, double width, double height)
+        {
+            Target = target;
+            X = x;
+            Y = y;
+            Width = width;
+            Height = height;
+        }
+
+        public string Target { get; }
+
+        public double X { get; private set; }
+
+        public double Y { get; private set; }
+
+        public double Width { get; }
+
+        public double Height { get; }
+
+        public override void Translate(double dx, double dy)
+        {
+            X += dx;
+            Y += dy;
+        }
+
+        public override void Draw(PdfGraphics g)
+        {
+            if (Target.StartsWith("#", System.StringComparison.Ordinal))
+            {
+                g.Page.AddLink(X, Y, Width, Height, Navigation.PdfDestination.Named(Target.Substring(1)));
+            }
+            else
+            {
+                g.Page.AddLink(X, Y, Width, Height, Target);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Marks where a heading or anchored paragraph starts. Draws nothing; the renderer turns
+    /// it into a named destination and a bookmark once the page exists.
+    /// </summary>
+    internal sealed class AnchorItem : DrawItem
+    {
+        public AnchorItem(Paragraph paragraph, double x, double y)
+        {
+            Paragraph = paragraph;
+            X = x;
+            Y = y;
+        }
+
+        public Paragraph Paragraph { get; }
+
+        public double X { get; private set; }
+
+        public double Y { get; private set; }
+
+        public override void Translate(double dx, double dy)
+        {
+            X += dx;
+            Y += dy;
+        }
+
+        public override void Draw(PdfGraphics g)
+        {
+        }
+    }
+
     internal static class DrawItemList
     {
         public static void TranslateAll(List<DrawItem> items, double dx, double dy)

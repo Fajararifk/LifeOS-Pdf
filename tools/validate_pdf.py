@@ -99,7 +99,54 @@ def decode_codes(path: str) -> set[str]:
     return found
 
 
-def validate(path: str, expected_texts: list[str], render_dir: str | None = None, expected_codes: list[str] | None = None) -> list[str]:
+def check_navigation(reader: "pypdf.PdfReader", outlines: list[str], links: list[str], attachments: list[str]) -> list[str]:
+    """Bookmarks resolve to pages, named destinations exist, expected links/attachments are present."""
+    problems: list[str] = []
+    try:
+        flat = []
+        def walk(items):
+            for item in items:
+                if isinstance(item, list):
+                    walk(item)
+                else:
+                    flat.append(item)
+        walk(reader.outline)
+        for item in flat:
+            if reader.get_destination_page_number(item) is None:
+                problems.append(f"bookmark {item.title!r} does not resolve to a page")
+        titles = [i.title for i in flat]
+    except Exception as e:  # noqa: BLE001
+        return [f"pypdf could not read the outline: {e}"]
+    for t in outlines:
+        if t not in titles:
+            problems.append(f"bookmark not found: {t!r} (have {titles[:12]})")
+
+    names = reader.named_destinations
+    uris: list[str] = []
+    for page in reader.pages:
+        for ref in page.get("/Annots") or []:
+            annot = ref.get_object()
+            if annot.get("/Subtype") != "/Link":
+                continue
+            action = annot.get("/A")
+            if action is not None and action.get("/S") == "/URI":
+                uris.append(str(action["/URI"]))
+            dest = annot.get("/Dest")
+            if isinstance(dest, (str, bytes)) and str(dest) not in names:
+                problems.append(f"link to undefined named destination {dest!r}")
+    for link in links:
+        if link not in uris:
+            problems.append(f"link not found: {link!r} (have {sorted(set(uris))})")
+
+    embedded = reader.attachments
+    for name in attachments:
+        if name not in embedded:
+            problems.append(f"attachment not found: {name!r} (have {sorted(embedded)})")
+    return problems
+
+
+def validate(path: str, expected_texts: list[str], render_dir: str | None = None, expected_codes: list[str] | None = None,
+             outlines: list[str] | None = None, links: list[str] | None = None, attachments: list[str] | None = None) -> list[str]:
     problems: list[str] = []
 
     with pikepdf.open(path) as pdf:
@@ -118,6 +165,7 @@ def validate(path: str, expected_texts: list[str], render_dir: str | None = None
         if expected not in text:
             problems.append(f"expected text not found: {expected!r}")
 
+    problems.extend(check_navigation(reader, outlines or [], links or [], attachments or []))
     problems.extend(render(path, render_dir))
 
     if expected_codes:
@@ -138,11 +186,15 @@ def main() -> int:
     parser.add_argument("--expect-text", action="append", default=[])
     parser.add_argument("--render-dir", default=None, help="save a PNG of every page here")
     parser.add_argument("--expect-code", action="append", default=[], help="text of a QR/barcode that must be readable")
+    parser.add_argument("--expect-outline", action="append", default=[], help="bookmark title that must exist")
+    parser.add_argument("--expect-link", action="append", default=[], help="URI of a link annotation that must exist")
+    parser.add_argument("--expect-attachment", action="append", default=[], help="name of an embedded file that must exist")
     args = parser.parse_args()
 
     failed = False
     for f in args.files:
-        for p in validate(f, args.expect_text, args.render_dir, args.expect_code):
+        for p in validate(f, args.expect_text, args.render_dir, args.expect_code,
+                          args.expect_outline, args.expect_link, args.expect_attachment):
             failed = True
             print("  - " + p)
     return 1 if failed else 0

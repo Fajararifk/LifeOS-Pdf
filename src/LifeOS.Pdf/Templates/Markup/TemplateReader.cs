@@ -20,20 +20,22 @@ namespace LifeOS.Pdf.Templates.Markup
             { "align", "spaceBefore", "spaceAfter", "indent", "rightIndent", "firstIndent", "lineSpacing", "keepWithNext", "keepTogether", "pageBreakBefore" };
 
         private static readonly string[] Blocks = { "h1", "h2", "h3", "p", "list", "table", "image", "qrcode", "barcode", "hr", "spacer", "pagebreak" };
-        private static readonly string[] Inlines = { TemplateNode.TextName, "b", "i", "u", "s", "span", "br", "pageNumber", "pageCount" };
+        private static readonly string[] Inlines = { TemplateNode.TextName, "b", "i", "u", "s", "span", "a", "br", "pageNumber", "pageCount" };
         private static readonly string[] Control = { "foreach", "if", "else", "set" };
 
         /// <summary>Element → (allowed attributes, allowed children).</summary>
         private static readonly Dictionary<string, Rule> Rules = new Dictionary<string, Rule>(StringComparer.Ordinal)
         {
-            ["document"] = new Rule(new[] { "title", "author", "subject", "keywords", "creator" }, new[] { "styles", "section" }),
-            ["styles"] = new Rule(new string[0], new[] { "font", "normal", "heading", "tableHeader" }),
+            ["document"] = new Rule(new[] { "title", "author", "subject", "keywords", "creator", "outline", "pageMode", "pageLayout", "zoom" },
+                new[] { "styles", "section", "attachment" }),
+            ["attachment"] = new Rule(new[] { "name", "src", "content", "mime", "description" }, new string[0]),
+            ["styles"] = new Rule(new string[0], new[] { "font", "normal", "heading", "tableHeader", "link" }),
             ["font"] = new Rule(new[] { "name", "regular", "bold", "italic", "boldItalic" }, new string[0]),
             ["normal"] = new Rule(StyleAttributes.Concat(new[] { "fallback" }).ToArray(), new string[0]),
             ["tableHeader"] = new Rule(StyleAttributes, new string[0]),
             ["heading"] = new Rule(StyleAttributes.Concat(new[] { "level", "spaceBefore", "spaceAfter" }).ToArray(), new string[0]),
             ["section"] = new Rule(new[] { "size", "orientation", "margin", "columns", "columnGap", "headerSpacing", "footerSpacing", "differentFirstPage" },
-                new[] { "header", "footer", "firstHeader", "firstFooter" }.Concat(Blocks).Concat(Inlines).ToArray()),
+                new[] { "header", "footer", "firstHeader", "firstFooter", "toc" }.Concat(Blocks).Concat(Inlines).ToArray()),
             ["header"] = Container(),
             ["footer"] = Container(),
             ["firstHeader"] = Container(),
@@ -47,6 +49,9 @@ namespace LifeOS.Pdf.Templates.Markup
             ["u"] = new Rule(new string[0], Inlines),
             ["s"] = new Rule(new string[0], Inlines),
             ["span"] = new Rule(StyleAttributes, Inlines),
+            ["a"] = new Rule(new[] { "href" }.Concat(StyleAttributes).ToArray(), Inlines),
+            ["toc"] = new Rule(new[] { "title", "maxLevel", "dots", "indent" }, new string[0]),
+            ["link"] = new Rule(StyleAttributes, new string[0]),
             ["br"] = new Rule(new string[0], new string[0]),
             ["pageNumber"] = new Rule(StyleAttributes, new string[0]),
             ["pageCount"] = new Rule(StyleAttributes, new string[0]),
@@ -276,7 +281,7 @@ namespace LifeOS.Pdf.Templates.Markup
 
         private static Rule Container() => new Rule(new string[0], Blocks.Concat(Inlines).ToArray());
 
-        private static Rule InlineContainer() => new Rule(ParagraphAttributes.Concat(StyleAttributes).ToArray(), Inlines);
+        private static Rule InlineContainer() => new Rule(ParagraphAttributes.Concat(StyleAttributes).Concat(new[] { "anchor" }).ToArray(), Inlines);
 
         private sealed class Rule
         {

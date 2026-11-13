@@ -140,6 +140,11 @@ namespace LifeOS.Pdf.Layout.Engine
                     break;
                 }
 
+                if (i == 0 && (_paragraph.Anchor != null || _paragraph.HeadingLevel > 0))
+                {
+                    items.Add(new AnchorItem(_paragraph, _leftIndent, 0));
+                }
+
                 DrawLine(ctx, line, width, y, items, i == 0 && _marker != null);
                 y += line.Height;
             }
@@ -225,7 +230,8 @@ namespace LifeOS.Pdf.Layout.Engine
             var paragraphStyle = _baseStyle.Merge(_paragraph.Style);
             foreach (var inline in _paragraph.Inlines)
             {
-                var style = new ResolvedStyle(paragraphStyle.Merge(inline.Style));
+                var inlineStyle = inline.LinkStyled ? paragraphStyle.Merge(ctx.Styles.Link).Merge(inline.Style) : paragraphStyle.Merge(inline.Style);
+                var style = new ResolvedStyle(inlineStyle, inline.Link);
                 switch (inline.Kind)
                 {
                     case InlineKind.LineBreak:
@@ -336,12 +342,17 @@ namespace LifeOS.Pdf.Layout.Engine
                 }
 
                 AddDecorations(piece, x, segmentWidth, baseline, items);
+                if (piece.Style.Link != null && segmentWidth > 0)
+                {
+                    items.Add(new LinkItem(piece.Style.Link, x, top, segmentWidth, line.Height));
+                }
+
                 x += segmentWidth;
             }
         }
 
         private static bool SameAppearance(Piece a, Piece b) =>
-            ReferenceEquals(a.Font, b.Font) && a.Style.Color == b.Style.Color &&
+            ReferenceEquals(a.Font, b.Font) && a.Style.Color == b.Style.Color && a.Style.Link == b.Style.Link &&
             a.Style.Underline == b.Style.Underline && a.Style.Strikethrough == b.Style.Strikethrough;
 
         private static void AddDecorations(Piece piece, double x, double width, double baseline, List<DrawItem> items)
@@ -571,6 +582,9 @@ namespace LifeOS.Pdf.Layout.Engine
                         break;
                     case PageBreakBlock _:
                         result.Add(new PageBreakLayouter());
+                        break;
+                    case TableOfContentsBlock toc:
+                        TocLayouter.Add(toc, baseStyle, ctx, result);
                         break;
                 }
             }

@@ -68,6 +68,17 @@ namespace LifeOS.Pdf.Objects
         internal override void WriteTo(PdfOutput output) => output.Write(PdfFormat.Number(Value));
     }
 
+    internal sealed class PdfNull : PdfObject
+    {
+        public static readonly PdfNull Instance = new PdfNull();
+
+        private PdfNull()
+        {
+        }
+
+        internal override void WriteTo(PdfOutput output) => output.Write("null");
+    }
+
     internal sealed class PdfBoolean : PdfObject
     {
         public static readonly PdfBoolean True = new PdfBoolean(true);
