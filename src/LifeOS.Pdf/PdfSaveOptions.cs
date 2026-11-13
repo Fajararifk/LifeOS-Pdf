@@ -24,5 +24,8 @@ namespace LifeOS.Pdf
         /// Off by default for maximum compatibility with very old tools.
         /// </summary>
         public bool UseObjectStreams { get; set; }
+
+        /// <summary>Encrypt the document with a password (§7.6); null (default) writes it unencrypted.</summary>
+        public PdfEncryptionOptions? Encryption { get; set; }
     }
 }

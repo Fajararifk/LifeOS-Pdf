@@ -3,6 +3,66 @@
 Format: [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 Before v1.0, a minor version may contain breaking changes (always listed here).
 
+## [1.1.0] — Phase 10: Render, Scan & OCR
+
+### Added
+- `LifeOS.Pdf.Rendering` (`PdfRenderer`): render PDF pages to PNG at a chosen DPI using PDFium
+  (Apache-2.0). Needs the native PDFium library.
+- `LifeOS.Pdf.Barcode.Scanning` (`BarcodeReader`): read QR codes and 1D barcodes from raw pixels or
+  PNG using zxing-cpp (Apache-2.0, via `ZXingCpp`). Round-trips with the Fase 4 encoders; handles
+  dense document QR codes (e.g. e-Faktur) that the older ZXing.Net port missed.
+- `LifeOS.Pdf.Ocr` (`OcrEngine`): OCR text (with word boxes) from images using Tesseract
+  (Apache-2.0); needs the `tessdata` language files.
+- `LifeOS.Pdf.Scanning` (`DocumentScanner`): one call renders a page and runs barcode + OCR.
+
+## [1.0.0] — Phase 9: Security (encryption)
+
+### Added
+- Standard security handler (§7.6.3): password encryption with **RC4-128** and **AES-128**
+  (write and read), cross-validated against qpdf/pikepdf. AES-256 (Revision 6) is recognized and
+  reported, not yet written.
+- `PdfSaveOptions.Encryption` → `PdfEncryptionOptions` (user/owner password, `PdfEncryptionAlgorithm`,
+  `PdfPermissions`, `EncryptMetadata`); `PdfReadOptions.Password`; `PdfDocument.IsEncrypted` and
+  `PdfDocument.Permissions`.
+- `PdfPermissions` flags (`Print`, `Modify`, `Copy`, `Annotate`, `FillForms`, `ExtractAccessibility`,
+  `Assemble`, `PrintHighQuality`) and `PdfEncryptionAlgorithm` (`RC4_128`, `AES_128`, `AES_256`).
+- Opening encrypted files with the user or owner password (including an empty user password);
+  removing protection by re-saving without `Encryption`.
+- RC4 implemented from scratch (removed from .NET); AES and the hashes use `System.Security.Cryptography`
+  (no new dependency).
+
+### Added (signing — `LifeOS.Pdf.Signing`, .NET 8+)
+- `PdfSigner`: adds a CMS/PKCS#7 detached signature (PAdES B-B) to a signature field; the signature
+  covers the whole file via `/ByteRange`; `Reason`, `Location`, `ContactInfo`.
+- `PdfSignatureValidator`: verifies the signature and reports whether it covers the whole document.
+- `PdfSignatureVerificationResult` (`IsValid`, `SignerName`, `CoversWholeDocument`).
+- Dependency: `System.Security.Cryptography.Pkcs` (Microsoft).
+
+### Notes
+- Deferred to a later phase: RFC 3161 timestamps (TSA), OCSP/CRL/LTV, multiple signatures,
+  certification signatures, and incremental save (`PdfSaveOptions.IncrementalUpdate`).
+
+## [0.9.0] — Phase 8: Forms (AcroForm)
+
+### Added
+- `PdfDocument.Form` (`LifeOS.Pdf.Forms.PdfForm`): the interactive form of a document.
+- `PdfPage.AddTextField`, `AddCheckBox`, `AddRadioButton` (a group shares one field name),
+  `AddComboBox`, `AddListBox`, `AddButton`, `AddSignatureField` (placeholder; signing is Phase 9).
+- Field types with explicit appearance streams: `PdfTextField` (multiline, password, comb,
+  max length, alignment, font, colors), `PdfCheckBox` (on-value, check style), `PdfRadioButton`,
+  `PdfChoiceField` (options, multi-select, editable), `PdfButton` (caption, optional ResetForm
+  action), `PdfSignatureField`. Border and background colors via `/AP`; `/DA` written for viewers.
+- Filling: `PdfForm.GetField`, `SetValue(name, string | bool | string[])` on an opened form
+  regenerates the field's appearance. Read-only fields refuse changes.
+- `PdfForm.Flatten`: bakes every widget's appearance into the page content (as a form XObject)
+  and removes `/AcroForm` and the widgets.
+- `PdfForm.ExportJson` / `ImportJson`: field values as a flat JSON object.
+- `samples`/`FormSample`: fillable form + its flattened twin.
+
+### Notes
+- No new dependency; forms share the core writer/parser. JavaScript is never emitted (only the
+  safe ResetForm action). FDF/XFDF, XFA flattening and digital signatures are deferred to Phase 8b/9.
+
 ## [0.8.0] — Phase 7: Content extraction
 
 ### Added

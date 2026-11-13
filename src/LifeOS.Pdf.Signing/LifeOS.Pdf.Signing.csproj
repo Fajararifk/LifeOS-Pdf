@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>LifeOS.Pdf.Signing</RootNamespace>
+    <PackageId>LifeOS.Pdf.Signing</PackageId>
+    <Description>Digital signatures (PAdES / CMS / PKCS#7) for LifeOS.Pdf documents.</Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LifeOS.Pdf\LifeOS.Pdf.csproj" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="8.0.2" />
+  </ItemGroup>
+
+</Project>

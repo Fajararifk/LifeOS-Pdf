@@ -22,6 +22,22 @@ namespace LifeOS.Pdf.Internal
 
         public long Position { get; private set; }
 
+        private SecurityHandler? _encryption;
+        private int _encryptionObject;
+        private bool _encryptionOn;
+
+        /// <summary>Sets the encryption context for the next object written; <paramref name="enabled"/> is false for /Encrypt and the trailer.</summary>
+        public void SetEncryption(SecurityHandler? encryption, int objectNumber, bool enabled)
+        {
+            _encryption = encryption;
+            _encryptionObject = objectNumber;
+            _encryptionOn = enabled;
+        }
+
+        /// <summary>Encrypts a string or stream body when writing an encrypted document.</summary>
+        public byte[] Encrypt(byte[] data, bool stream) =>
+            _encryption != null && _encryptionOn ? _encryption.EncryptData(data, _encryptionObject, 0, stream) : data;
+
         public void Write(string ascii)
         {
             for (var i = 0; i < ascii.Length; i++)

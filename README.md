@@ -27,6 +27,11 @@ Nothing else to install, on a developer machine or a server: the package is
 on Linux, Windows, macOS, Docker and serverless hosts alike. The 14 standard
 fonts need no font files; for TrueType fonts you ship the `.ttf` with your app.
 
+Optional companion packages are published separately and may use native
+libraries: `LifeOS.Pdf.Signing` (CMS/PKCS#7), `LifeOS.Pdf.Rendering` (PDFium),
+`LifeOS.Pdf.Barcode.Scanning` (zxing-cpp), `LifeOS.Pdf.Ocr` (Tesseract) and
+`LifeOS.Pdf.Scanning`. The core package never depends on any of them.
+
 ## Status
 
 | Phase | Scope | Status |
@@ -39,9 +44,9 @@ fonts need no font files; for TrueType fonts you ship the `.ttf` with your app.
 | 5 | Links, bookmarks, table of contents, attachments, annotations | ✅ v0.6 |
 | 6 | Open existing PDFs: merge, split, watermark, page numbers, n-up, compress | ✅ v0.7 |
 | 7 | Extract text, images and tables (CSV/JSON), search, PDF → HTML, true redaction | ✅ v0.8 |
-| 8 | Forms: create, fill, flatten | next |
-| 9 | Encryption & digital signatures | planned |
-| 10 | Render to images, read QR/barcodes, OCR (separate packages) | planned |
+| 8 | Forms: create, fill, flatten | ✅ v0.9 |
+| 9 | Encryption (password) & digital signatures | ✅ v1.0 |
+| 10 | Render to images, read QR/barcodes, OCR (separate packages) | ✅ v1.1 |
 | 11 | HTML → PDF (wkhtmltopdf & Chromium, separate package) | planned |
 | 12 | Office → PDF: Excel/CSV, Word, PowerPoint; Word templates (mail merge) — separate package | planned |
 | 13 | Vector charts, Markdown → PDF, PDF tables → Excel | planned |
@@ -253,7 +258,7 @@ newPage.Graphics.DrawPage(doc.Pages[0], 40, 40, 250, 350);            // a page 
 The parser handles cross-reference streams, object streams, incremental updates and damaged
 files (the cross-reference is rebuilt), and is safe on untrusted input: nesting, stream size,
 object count and page count are limited (`PdfReadOptions`), and scripts in copied
-annotations are dropped. Encrypted files are reported with `PdfEncryptedException`.
+annotations are dropped. Encrypted files open with `PdfReadOptions.Password`.
 
 ### Extract text, tables and images · search · redact
 
@@ -297,6 +302,83 @@ scan.Save("scan.pdf");
 ```
 
 More examples in [samples/LifeOS.Pdf.Samples](samples/LifeOS.Pdf.Samples/Program.cs).
+
+### Forms
+
+Create fillable forms, fill existing ones and flatten them into static content — all in the
+core package.
+
+```csharp
+using LifeOS.Pdf.Forms;
+
+var page = doc.AddPage();
+page.AddTextField("Customer.Nama", 72, 72, 200, 20).Value = "Budi";
+page.AddCheckBox("Setuju", 72, 110, 16, 16).Checked = true;
+page.AddRadioButton("Gender", "Pria", 72, 140, 14, 14);
+page.AddRadioButton("Gender", "Wanita", 130, 140, 14, 14);
+page.AddComboBox("Kota", 72, 170, 150, 20, "Jakarta", "Bandung").SelectedValues = new[] { "Bandung" };
+doc.Save("form.pdf");
+
+// Fill an opened form, then bake the result into static pages
+var form = PdfDocument.Open("form.pdf");
+form.Form.SetValue("Customer.Nama", "Siti");
+form.Form.Flatten();
+form.Save("flat.pdf");
+```
+
+Text, checkbox, radio group, combo/list, push button and signature fields, with appearance
+streams written for every state; `ExportJson`/`ImportJson` for field data.
+
+### Encryption & digital signatures
+
+Password protection (standard security handler, RC4-128 and AES-128) is in the core package.
+
+```csharp
+doc.Save("encrypted.pdf", new PdfSaveOptions
+{
+    Encryption = new PdfEncryptionOptions { UserPassword = "rahasia", OwnerPassword = "owner" },
+});
+
+var opened = PdfDocument.Open("encrypted.pdf", new PdfReadOptions { Password = "rahasia" });
+opened.Save("decrypted.pdf");   // save without Encryption to remove the password
+```
+
+Digital signatures are in the separate package `LifeOS.Pdf.Signing` (.NET 8+):
+
+```csharp
+using LifeOS.Pdf.Signing;
+
+page.AddSignatureField("Ttd", 400, 700, 160, 40);
+var signed = new PdfSigner(certificate) { Reason = "Persetujuan" }.Sign(doc);  // CMS/PKCS#7, PAdES B-B
+var result = PdfSignatureValidator.Verify(signed);   // IsValid, SignerName, CoversWholeDocument
+```
+
+### Render, read QR/barcodes & OCR (separate packages)
+
+Three optional packages for scanned documents. They use native libraries, so install the
+runtime as described in each package.
+
+```csharp
+using LifeOS.Pdf.Rendering;
+using LifeOS.Pdf.BarcodeScanning;
+using LifeOS.Pdf.Ocr;
+using LifeOS.Pdf.Scanning;
+
+// Render a page to PNG at a chosen DPI (PDFium)
+var image = new PdfRenderer().Render(doc.ToArray(), 0, new RenderOptions { Dpi = 200 });
+
+// Read every QR code / barcode on the page (zxing-cpp)
+foreach (var b in new BarcodeReader().ReadAllPng(image.Png))
+    Console.WriteLine($"[{b.Format}] {b.Text}");
+
+// OCR text from a scanned image (Tesseract; needs the tessdata language files)
+using var ocr = new OcrEngine("/path/to/tessdata", "eng+ind");
+string text = ocr.RecognizeText(image.Png);
+
+// Or combine render + barcode + OCR in one call
+using var scanner = new DocumentScanner("/path/to/tessdata", "eng");
+var scanned = scanner.ScanPage(doc, 0);   // ScannedPage.Text + ScannedPage.Barcodes
+```
 
 ## Build & test
 

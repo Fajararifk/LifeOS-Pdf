@@ -75,6 +75,21 @@ namespace LifeOS.Pdf.Samples
 
             // Reading content back: text, tables, images, HTML, redaction (Fase 7).
             ExtractionSample.Run(outputDir);
+
+            // Interactive forms: create, fill and flatten (Fase 8).
+            FormSample.Run(outputDir);
+
+            // Encryption (Fase 9): password-protected output.
+            var protectedDoc = new PdfDocument();
+            var pp = protectedDoc.AddPage();
+            pp.Graphics.DrawText("Dokumen terproteksi — password: rahasia",
+                new PdfFont(StandardFont.HelveticaBold, 16), Margin, 72, Accent);
+            var protectedPath = Path.Combine(outputDir, "encrypted.pdf");
+            protectedDoc.Save(protectedPath, new PdfSaveOptions
+            {
+                Encryption = new PdfEncryptionOptions { UserPassword = "rahasia", OwnerPassword = "owner", Algorithm = PdfEncryptionAlgorithm.AES_128 },
+            });
+            Console.WriteLine("Wrote " + protectedPath + " (" + new FileInfo(protectedPath).Length + " bytes)");
             return 0;
         }
 

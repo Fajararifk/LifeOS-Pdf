@@ -193,6 +193,7 @@ namespace LifeOS.Pdf.Parsing
             }
 
             _removedAnnotations = page.RemovedAnnotations;
+            _formWidgetNumbers = page.FormWidgetNumbers;
             var annots = Annotations(sp);
             if (annots.Items.Count > 0)
             {
@@ -203,6 +204,8 @@ namespace LifeOS.Pdf.Parsing
         }
 
         private HashSet<int>? _removedAnnotations;
+
+        private HashSet<int> _formWidgetNumbers = new HashSet<int>();
 
         /// <summary>Applies redaction replacements to a page's (copied) XObject dictionary.</summary>
         private void Replace(PdfParser parser, PdfDictionary xobjects, Extraction.Engine.ContentOverride replaced)
@@ -309,6 +312,11 @@ namespace LifeOS.Pdf.Parsing
                 if (number > 0 && _removedAnnotations != null && _removedAnnotations.Contains(number))
                 {
                     continue; // removed by redaction
+                }
+
+                if (number > 0 && _formWidgetNumbers.Contains(number))
+                {
+                    continue; // form widget: rewritten by FormWriter with the current value
                 }
 
                 var clean = new PdfDictionary();

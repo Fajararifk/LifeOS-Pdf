@@ -14,6 +14,9 @@
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
     <InternalsVisibleTo Include="LifeOS.Pdf.Tests" />
+    <InternalsVisibleTo Include="LifeOS.Pdf.Signing" />
+    <InternalsVisibleTo Include="LifeOS.Pdf.Barcode.Scanning" />
+    <InternalsVisibleTo Include="LifeOS.Pdf.Rendering" />
   </ItemGroup>
 
   <ItemGroup>

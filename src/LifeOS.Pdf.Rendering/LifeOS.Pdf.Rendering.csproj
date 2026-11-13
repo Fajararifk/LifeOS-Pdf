@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net5.0;net6.0;net7.0;net8.0;net9.0;net10.0</TargetFrameworks>
+    <RootNamespace>LifeOS.Pdf.Rendering</RootNamespace>
+    <PackageId>LifeOS.Pdf.Rendering</PackageId>
+    <Description>Render PDF pages to PNG/JPEG using PDFium (Apache-2.0).</Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LifeOS.Pdf\LifeOS.Pdf.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PDFiumCore" Version="157.0.8100" />
+  </ItemGroup>
+
+</Project>

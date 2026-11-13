@@ -14,6 +14,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\LifeOS.Pdf\LifeOS.Pdf.csproj" />
+    <ProjectReference Include="..\..\src\LifeOS.Pdf.Signing\LifeOS.Pdf.Signing.csproj" />
+    <ProjectReference Include="..\..\src\LifeOS.Pdf.Barcode.Scanning\LifeOS.Pdf.Barcode.Scanning.csproj" />
+    <ProjectReference Include="..\..\src\LifeOS.Pdf.Rendering\LifeOS.Pdf.Rendering.csproj" />
+    <ProjectReference Include="..\..\src\LifeOS.Pdf.Ocr\LifeOS.Pdf.Ocr.csproj" />
+    <ProjectReference Include="..\..\src\LifeOS.Pdf.Scanning\LifeOS.Pdf.Scanning.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

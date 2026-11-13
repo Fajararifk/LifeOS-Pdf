@@ -4,8 +4,13 @@ namespace LifeOS.Pdf
     public sealed class PdfEncryptedException : PdfReadException
     {
         public PdfEncryptedException()
-            : base("The PDF is encrypted (it has an /Encrypt dictionary, possibly with an empty password). " +
-                   "LifeOS.Pdf cannot open encrypted files yet; remove the protection first (for example: qpdf --decrypt in.pdf out.pdf).")
+            : this("The PDF is encrypted (it has an /Encrypt dictionary, possibly with an empty password). " +
+                   "Provide the password in PdfReadOptions.Password, or remove the protection first (for example: qpdf --decrypt in.pdf out.pdf).")
+        {
+        }
+
+        public PdfEncryptedException(string message)
+            : base(message)
         {
         }
     }

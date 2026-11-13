@@ -3,6 +3,18 @@
 The core package `LifeOS.Pdf` contains no third-party code and has no NuGet
 dependencies.
 
+## Optional companion packages
+
+| Package | Dependency | License |
+|---|---|---|
+| `LifeOS.Pdf.Signing` | `System.Security.Cryptography.Pkcs` | MIT (Microsoft) |
+| `LifeOS.Pdf.Rendering` | `PDFiumCore` (PDFium) | Apache-2.0 / BSD-3-Clause |
+| `LifeOS.Pdf.Barcode.Scanning` | `ZXingCpp` (zxing-cpp) | Apache-2.0 |
+| `LifeOS.Pdf.Ocr` | `Tesseract` | Apache-2.0 |
+
+The native libraries used by these packages (PDFium and Tesseract binaries, and the Tesseract
+language data) are not bundled in this repository; see each package's README for setup.
+
 ## Adobe Core 14 font metrics
 
 `src/LifeOS.Pdf/Fonts/Standard/StandardFontMetrics.Generated.cs` contains glyph

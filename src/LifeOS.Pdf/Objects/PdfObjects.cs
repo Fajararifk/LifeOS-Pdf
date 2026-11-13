@@ -211,12 +211,13 @@ namespace LifeOS.Pdf.Objects
         {
             if (IsHex)
             {
-                output.Write("<" + PdfFormat.Hex(Bytes) + ">");
+                output.Write("<" + PdfFormat.Hex(output.Encrypt(Bytes, false)) + ">");
                 return;
             }
 
+            var data = output.Encrypt(Bytes, false);
             output.WriteByte((byte)'(');
-            foreach (var b in Bytes)
+            foreach (var b in data)
             {
                 if (b == '(' || b == ')' || b == '\\')
                 {
@@ -359,10 +360,11 @@ namespace LifeOS.Pdf.Objects
 
         internal override void WriteTo(PdfOutput output)
         {
-            Dictionary.Set("Length", Data.Length);
+            var data = output.Encrypt(Data, true);
+            Dictionary.Set("Length", data.Length);
             Dictionary.WriteTo(output);
             output.Write("\nstream\n");
-            output.Write(Data);
+            output.Write(data);
             output.Write("\nendstream");
         }
     }

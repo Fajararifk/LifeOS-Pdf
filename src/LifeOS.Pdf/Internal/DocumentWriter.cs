@@ -8,6 +8,7 @@ using LifeOS.Pdf.Fonts;
 using LifeOS.Pdf.Fonts.Embedding;
 using LifeOS.Pdf.Fonts.Standard;
 using LifeOS.Pdf.Fonts.TrueType;
+using LifeOS.Pdf.Forms.Internal;
 using LifeOS.Pdf.Objects;
 using LifeOS.Pdf.Parsing;
 
@@ -46,6 +47,8 @@ namespace LifeOS.Pdf.Internal
             var pagesRoot = New();
 
             // Shared resources: one object per font / image / state for the whole document.
+            // Form field fonts are registered first so embedded fonts subset the right glyphs.
+            document.Form.RegisterFonts();
             var fontObjects = new Dictionary<PdfFontFace, PdfIndirectObject>();
             foreach (var face in document.Resources.Fonts)
             {
@@ -188,12 +191,20 @@ namespace LifeOS.Pdf.Internal
                 .Set("Pages", pagesRoot.Reference);
             interactive.Complete(catalogDict);
 
+            var formWriter = new FormWriter(document, New, fontObjects, copier);
+            formWriter.Write(catalogDict, pageObjects);
+
             catalog.Value = catalogDict;
 
             var info = New();
             info.Value = BuildInfo(document.Info);
 
-            return options.UseObjectStreams ? CompactSerializer.Serialize(objects, catalog, info, Header) : Serialize(objects, catalog, info);
+            if (options.Encryption != null)
+            {
+                return Encrypt(options, objects, catalog, info, New);
+            }
+
+            return options.UseObjectStreams ? CompactSerializer.Serialize(objects, catalog, info, Header) : Serialize(objects, catalog, info, null, null, null);
         }
 
         internal static PdfStream ContentStream(byte[] content, PdfSaveOptions options)
@@ -289,6 +300,113 @@ namespace LifeOS.Pdf.Internal
                 output.Flush();
                 return ms.ToArray();
             }
+        }
+
+        private static byte[] Encrypt(PdfSaveOptions options, List<PdfIndirectObject> objects, PdfIndirectObject catalog, PdfIndirectObject info, Func<PdfIndirectObject> newObject)
+        {
+            // The file key is derived from /ID[0], which is itself derived from the content; compute it
+            // on the unencrypted document first, then serialize again with encryption.
+            var id = MD5.Create().ComputeHash(Serialize(objects, catalog, info));
+            var handler = SecurityHandler.Create(options.Encryption!, id);
+
+            var encryptObject = newObject();
+            encryptObject.Value = BuildEncryptDict(handler);
+
+            return Serialize(objects, catalog, info, encryptObject, handler, id);
+        }
+
+        private static byte[] Serialize(List<PdfIndirectObject> objects, PdfIndirectObject catalog, PdfIndirectObject info, PdfIndirectObject? encryptObject, SecurityHandler? encryption, byte[]? fixedId)
+        {
+            using (var ms = new MemoryStream())
+            {
+                var output = new PdfOutput(ms);
+                output.Write(Header);
+
+                var offsets = new long[objects.Count];
+                for (var i = 0; i < objects.Count; i++)
+                {
+                    var obj = objects[i];
+                    if (obj.Value == null)
+                    {
+                        throw new InvalidOperationException("Internal error: object " + obj.Number + " has no value.");
+                    }
+
+                    output.SetEncryption(encryption, obj.Number, encryption != null && !ReferenceEquals(obj, encryptObject));
+                    offsets[i] = output.Position;
+                    output.WriteInteger(obj.Number);
+                    output.Write(" 0 obj\n");
+                    obj.Value.WriteTo(output);
+                    output.Write("\nendobj\n");
+                }
+
+                output.SetEncryption(null, 0, false);
+
+                var xrefOffset = output.Position;
+                var xref = new StringBuilder();
+                xref.Append("xref\n0 ").Append((objects.Count + 1).ToString(CultureInfo.InvariantCulture)).Append('\n');
+                xref.Append("0000000000 65535 f \n");
+                foreach (var offset in offsets)
+                {
+                    xref.Append(offset.ToString("D10", CultureInfo.InvariantCulture)).Append(" 00000 n \n");
+                }
+
+                output.Write(xref.ToString());
+
+                byte[] id = fixedId ?? ComputeId(ms, output);
+
+                var trailer = new PdfDictionary()
+                    .Set("Size", objects.Count + 1)
+                    .Set("Root", catalog.Reference)
+                    .Set("Info", info.Reference);
+                if (encryptObject != null)
+                {
+                    trailer.Set("Encrypt", encryptObject.Reference);
+                }
+
+                trailer.Set("ID", new PdfArray(PdfString.Hex(id), PdfString.Hex(id)));
+
+                output.Write("trailer\n");
+                trailer.WriteTo(output);
+                output.Write("\nstartxref\n" + xrefOffset.ToString(CultureInfo.InvariantCulture) + "\n%%EOF\n");
+                output.Flush();
+                return ms.ToArray();
+            }
+        }
+
+        private static byte[] ComputeId(MemoryStream ms, PdfOutput output)
+        {
+            using (var md5 = MD5.Create())
+            {
+                output.Flush();
+                return md5.ComputeHash(ms.GetBuffer(), 0, (int)ms.Length);
+            }
+        }
+
+        private static PdfDictionary BuildEncryptDict(SecurityHandler handler)
+        {
+            var dict = new PdfDictionary()
+                .Set("Filter", "Standard")
+                .Set("V", handler.Version)
+                .Set("R", handler.Revision)
+                .Set("Length", handler.KeyLength)
+                .Set("P", (long)handler.PermissionsValue)
+                .Set("O", PdfString.Hex(handler.O!))
+                .Set("U", PdfString.Hex(handler.U!));
+            if (handler.Version >= 4)
+            {
+                var name = handler.Filter;
+                dict.Set("StmF", name).Set("StrF", name);
+                dict.Set("CF", new PdfDictionary().Set(name, new PdfDictionary()
+                    .Set("CFM", name)
+                    .Set("Length", handler.KeyLength / 8)));
+            }
+
+            if (!handler.EncryptMetadata)
+            {
+                dict.Set("EncryptMetadata", PdfBoolean.False);
+            }
+
+            return dict;
         }
     }
 }

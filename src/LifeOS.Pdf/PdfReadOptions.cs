@@ -42,6 +42,9 @@ namespace LifeOS.Pdf
             set => _maxPages = value >= 1 ? value : throw new ArgumentOutOfRangeException(nameof(MaxPages), value, "MaxPages must be at least 1.");
         }
 
+        /// <summary>Password used to open an encrypted PDF (§7.6).</summary>
+        public string? Password { get; set; }
+
         internal const int MaxReferenceChain = 64;
         internal const int MaxXrefSections = 256;
         internal const int MaxTreeDepth = 64;

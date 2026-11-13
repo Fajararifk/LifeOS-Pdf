@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using LifeOS.Pdf.Internal;
 using LifeOS.Pdf.Objects;
 
 namespace LifeOS.Pdf.Parsing
@@ -47,7 +48,14 @@ namespace LifeOS.Pdf.Parsing
 
             if (Trailer.Get("Encrypt") != null)
             {
-                throw new PdfEncryptedException();
+                IsEncrypted = true;
+                var encryptDict = Resolve(Trailer.Get("Encrypt")) as PdfDictionary;
+                if (encryptDict == null)
+                {
+                    throw new PdfEncryptedException();
+                }
+
+                Security = SecurityHandler.Open(encryptDict, Options.Password, FileId());
             }
 
             if (!(Resolve(Trailer.Get("Root")) is PdfDictionary) && !_rebuilt)
@@ -76,6 +84,22 @@ namespace LifeOS.Pdf.Parsing
         public PdfDictionary Trailer { get; private set; }
 
         public PdfDictionary Catalog => (PdfDictionary)Resolve(Trailer.Get("Root"))!;
+
+        /// <summary>The security handler when the file is encrypted, else null.</summary>
+        public SecurityHandler? Security { get; private set; }
+
+        /// <summary>True when the file has an /Encrypt dictionary.</summary>
+        public bool IsEncrypted { get; private set; }
+
+        private byte[]? FileId()
+        {
+            if (Resolve(Trailer.Get("ID")) is PdfArray id && id.Items.Count > 0 && id.Items[0] is PdfString s)
+            {
+                return s.Bytes;
+            }
+
+            return null;
+        }
 
         public int ObjectCount => _xref.Count;
 
@@ -171,7 +195,7 @@ namespace LifeOS.Pdf.Parsing
                 return null;
             }
 
-            var parser = new ObjectParser(new Lexer(_data, offset, Names), this, Options.MaxDepth);
+            var parser = new ObjectParser(new Lexer(_data, offset, Names), this, Options.MaxDepth, decrypt: true);
             try
             {
                 var value = parser.ParseIndirect(out var n, out _);

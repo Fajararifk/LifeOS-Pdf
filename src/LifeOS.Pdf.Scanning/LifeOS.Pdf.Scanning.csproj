@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net6.0;net8.0;net9.0;net10.0</TargetFrameworks>
+    <RootNamespace>LifeOS.Pdf.Scanning</RootNamespace>
+    <PackageId>LifeOS.Pdf.Scanning</PackageId>
+    <Description>Combined render + barcode + OCR pipeline for scanned PDFs.</Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LifeOS.Pdf\LifeOS.Pdf.csproj" />
+    <ProjectReference Include="..\LifeOS.Pdf.Rendering\LifeOS.Pdf.Rendering.csproj" />
+    <ProjectReference Include="..\LifeOS.Pdf.Barcode.Scanning\LifeOS.Pdf.Barcode.Scanning.csproj" />
+    <ProjectReference Include="..\LifeOS.Pdf.Ocr\LifeOS.Pdf.Ocr.csproj" />
+  </ItemGroup>
+
+</Project>

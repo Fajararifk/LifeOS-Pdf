@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using LifeOS.Pdf.Annotations;
 using LifeOS.Pdf.Drawing;
 using LifeOS.Pdf.Fonts;
+using LifeOS.Pdf.Forms;
+using LifeOS.Pdf.Forms.Internal;
 using LifeOS.Pdf.Images;
 using LifeOS.Pdf.Internal;
 using LifeOS.Pdf.Navigation;
@@ -60,7 +62,7 @@ namespace LifeOS.Pdf
         internal double OriginY { get; private set; }
 
         /// <summary>An imported page with nothing added: it can be copied or drawn as it is in the file.</summary>
-        internal bool IsPristine => Source != null && Graphics.ContentLength == 0 && Annotations.Count == 0 && ContentOverride == null && RemovedAnnotations.Count == 0;
+        internal bool IsPristine => Source != null && Graphics.ContentLength == 0 && Annotations.Count == 0 && ContentOverride == null && RemovedAnnotations.Count == 0 && FormWidgets.Count == 0;
 
         /// <summary>Rewritten content of an imported page (redaction) and the XObjects it replaces (null = removed).</summary>
         internal Extraction.Engine.ContentOverride? ContentOverride { get; set; }
@@ -196,6 +198,12 @@ namespace LifeOS.Pdf
         /// <summary>Annotations in the order they were added (links, notes, highlights, stamps).</summary>
         internal List<Annotation> Annotations { get; } = new List<Annotation>();
 
+        /// <summary>Form field widgets on this page, in creation order.</summary>
+        internal List<FormWidget> FormWidgets { get; } = new List<FormWidget>();
+
+        /// <summary>Object numbers of source widget annotations owned by the form (not copied).</summary>
+        internal HashSet<int> FormWidgetNumbers { get; } = new HashSet<int>();
+
         /// <summary>Makes the area (top-left x, y, width, height in points) a link to a web address (http, https, mailto, tel).</summary>
         public void AddLink(double x, double y, double width, double height, string uri)
         {
@@ -240,6 +248,113 @@ namespace LifeOS.Pdf
             var font = new PdfFont(face, size);
             var name = _document.Resources.FontName(face, font.Map(text));
             Annotations.Add(new StampAnnotation(x, y, width, height, text, font, name) { Color = color, Contents = text });
+        }
+
+        // ------------------------------------------------------------------ form fields (Fase 8)
+
+        /// <summary>Adds a text field (single- or multi-line) at the given area.</summary>
+        public PdfTextField AddTextField(string name, double x, double y, double width, double height)
+        {
+            RequireArea(x, y, width, height);
+            var field = new PdfTextField(name);
+            field.AddWidget(this, x, y, width, height);
+            Document.Form.Add(field);
+            return field;
+        }
+
+        /// <summary>Adds a checkbox.</summary>
+        public PdfCheckBox AddCheckBox(string name, double x, double y, double width, double height)
+        {
+            RequireArea(x, y, width, height);
+            var field = new PdfCheckBox(name);
+            field.AddWidget(this, x, y, width, height);
+            Document.Form.Add(field);
+            return field;
+        }
+
+        /// <summary>Adds a radio button to a group; buttons sharing a name form one field.</summary>
+        public PdfRadioButton AddRadioButton(string groupName, string onValue, double x, double y, double width, double height)
+        {
+            RequireArea(x, y, width, height);
+            if (groupName == null)
+            {
+                throw new ArgumentNullException(nameof(groupName));
+            }
+
+            if (string.IsNullOrEmpty(onValue))
+            {
+                throw new ArgumentException("A radio button needs an on-state name.", nameof(onValue));
+            }
+
+            var existing = Document.Form.GetField(groupName);
+            PdfRadioButton field;
+            if (existing != null)
+            {
+                if (!(existing is PdfRadioButton radio))
+                {
+                    throw new ArgumentException("Field '" + groupName + "' already exists and is not a radio group.", nameof(groupName));
+                }
+
+                field = radio;
+            }
+            else
+            {
+                field = new PdfRadioButton(groupName);
+                Document.Form.Add(field);
+            }
+
+            field.AddWidget(this, x, y, width, height).OnState = onValue;
+            return field;
+        }
+
+        /// <summary>Adds an editable combo box.</summary>
+        public PdfChoiceField AddComboBox(string name, double x, double y, double width, double height, params string[] options)
+        {
+            RequireArea(x, y, width, height);
+            var field = new PdfChoiceField(name, combo: true);
+            foreach (var option in options)
+            {
+                field.AddOption(new PdfChoiceOption(option));
+            }
+
+            field.AddWidget(this, x, y, width, height);
+            Document.Form.Add(field);
+            return field;
+        }
+
+        /// <summary>Adds a list box.</summary>
+        public PdfChoiceField AddListBox(string name, double x, double y, double width, double height, params string[] options)
+        {
+            RequireArea(x, y, width, height);
+            var field = new PdfChoiceField(name, combo: false) { MultiSelect = true };
+            foreach (var option in options)
+            {
+                field.AddOption(new PdfChoiceOption(option));
+            }
+
+            field.AddWidget(this, x, y, width, height);
+            Document.Form.Add(field);
+            return field;
+        }
+
+        /// <summary>Adds a push button with a caption.</summary>
+        public PdfButton AddButton(string name, double x, double y, double width, double height, string caption)
+        {
+            RequireArea(x, y, width, height);
+            var field = new PdfButton(name) { Caption = caption ?? string.Empty };
+            field.AddWidget(this, x, y, width, height);
+            Document.Form.Add(field);
+            return field;
+        }
+
+        /// <summary>Adds a signature field (placeholder; signing arrives in Fase 9).</summary>
+        public PdfSignatureField AddSignatureField(string name, double x, double y, double width, double height)
+        {
+            RequireArea(x, y, width, height);
+            var field = new PdfSignatureField(name);
+            field.AddWidget(this, x, y, width, height);
+            Document.Form.Add(field);
+            return field;
         }
 
         private static void RequireArea(double x, double y, double width, double height)

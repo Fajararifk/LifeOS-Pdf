@@ -15,12 +15,16 @@ namespace LifeOS.Pdf.Parsing
         private readonly Lexer _lexer;
         private readonly PdfParser _owner;
         private readonly int _maxDepth;
+        private readonly bool _decrypt;
+        private int _objectNumber = -1;
+        private int _generation;
 
-        public ObjectParser(Lexer lexer, PdfParser owner, int maxDepth)
+        public ObjectParser(Lexer lexer, PdfParser owner, int maxDepth, bool decrypt = false)
         {
             _lexer = lexer;
             _owner = owner;
             _maxDepth = maxDepth;
+            _decrypt = decrypt;
         }
 
         public Lexer Lexer => _lexer;
@@ -43,9 +47,9 @@ namespace LifeOS.Pdf.Parsing
                 case TokenKind.Name:
                     return token.Text!.Length == 0 ? (PdfObject)PdfNull.Instance : new PdfName(token.Text);
                 case TokenKind.String:
-                    return PdfString.FromBytes(token.Bytes!, false);
+                    return PdfString.FromBytes(Decrypt(token.Bytes!), false);
                 case TokenKind.HexString:
-                    return PdfString.FromBytes(token.Bytes!, true);
+                    return PdfString.FromBytes(Decrypt(token.Bytes!), true);
                 case TokenKind.ArrayStart:
                     return ParseArray(depth + 1);
                 case TokenKind.DictStart:
@@ -175,6 +179,8 @@ namespace LifeOS.Pdf.Parsing
 
             number = (int)Math.Min(int.MaxValue, Math.Max(-1, n.Integer));
             generation = (int)Math.Min(int.MaxValue, Math.Max(-1, g.Integer));
+            _objectNumber = number;
+            _generation = generation;
             var value = ParseObject();
             if (value is PdfDictionary dict)
             {
@@ -248,8 +254,14 @@ namespace LifeOS.Pdf.Parsing
                 _lexer.Position = start + length;
             }
 
-            return new PdfStream(dict, bytes);
+            return new PdfStream(dict, DecryptStream(bytes));
         }
+
+        private byte[] Decrypt(byte[] data) =>
+            _decrypt && _owner.Security != null ? _owner.Security.DecryptData(data, _objectNumber, _generation, stream: false) : data;
+
+        private byte[] DecryptStream(byte[] data) =>
+            _decrypt && _owner.Security != null ? _owner.Security.DecryptData(data, _objectNumber, _generation, stream: true) : data;
 
         private bool EndsWithEndStream(long position)
         {

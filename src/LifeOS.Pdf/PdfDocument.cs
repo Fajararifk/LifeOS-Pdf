@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using LifeOS.Pdf.Attachments;
+using LifeOS.Pdf.Forms;
+using LifeOS.Pdf.Forms.Internal;
 using LifeOS.Pdf.Internal;
 using LifeOS.Pdf.Navigation;
 
@@ -22,6 +24,14 @@ namespace LifeOS.Pdf
 
         /// <summary>Title, author and other properties.</summary>
         public PdfDocumentInfo Info { get; } = new PdfDocumentInfo();
+
+        /// <summary>The interactive form (AcroForm): fields, filling and flattening.</summary>
+        public PdfForm Form { get; }
+
+        public PdfDocument()
+        {
+            Form = new PdfForm(this);
+        }
 
         public IReadOnlyList<PdfPage> Pages => _pages;
 
@@ -116,6 +126,12 @@ namespace LifeOS.Pdf
             doc.Info.CreationDate = source.InfoDate("CreationDate");
             doc.Info.ModificationDate = source.InfoDate("ModDate");
             doc.PdfVersion = parser.Version;
+            doc.IsEncrypted = parser.IsEncrypted;
+            if (parser.Security != null)
+            {
+                doc.Permissions = (PdfPermissions)(parser.Security.PermissionsValue & (int)PdfPermissions.All);
+            }
+
             foreach (var sp in source.Pages)
             {
                 var m = sp.MediaBox;
@@ -123,11 +139,18 @@ namespace LifeOS.Pdf
             }
 
             Parsing.OutlineImporter.Import(source, doc);
+            FormReader.Read(doc.Form, source);
             return doc;
         }
 
         /// <summary>PDF version from the header of an opened file (e.g. "1.4"), or null for a new document.</summary>
         public string? PdfVersion { get; private set; }
+
+        /// <summary>True when the opened file was encrypted (§7.6).</summary>
+        public bool IsEncrypted { get; private set; }
+
+        /// <summary>Permissions of an opened encrypted file, or null when it was not encrypted.</summary>
+        public PdfPermissions? Permissions { get; private set; }
 
         /// <summary>
         /// Copies a page from another document (or this one) to the end. The page keeps its content,
