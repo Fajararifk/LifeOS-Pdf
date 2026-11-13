@@ -1,41 +1,52 @@
 # LifeOS.Pdf
 
-Library PDF open-source untuk .NET, **ditulis dari nol** dengan C#, tanpa
-dependency. Jalan di **.NET Standard 2.0, .NET 5, 6, 7, 8, 9, dan 10**
-(dan .NET Framework 4.6.1+ lewat netstandard2.0).
+An open-source PDF library for .NET, **written from scratch** in C# with no
+dependencies. Runs on **.NET Standard 2.0 and .NET 5, 6, 7, 8, 9 and 10**
+(and .NET Framework 4.6.1+ through netstandard2.0).
 
-File yang dihasilkan divalidasi dengan qpdf, pypdf, dan PDFium (engine di
-balik PDF viewer Chrome), dan font tertanamnya dengan fontTools serta OTS
-(sanitizer font di Chrome/Firefox), jadi bisa dibuka di Chrome, Edge, Firefox,
-Adobe Acrobat, maupun PDF reader lain.
+Every generated file is validated with qpdf, pypdf and PDFium (the engine behind
+Chrome's PDF viewer), and embedded fonts with fontTools and OTS (the font
+sanitizer used by Chrome and Firefox), so output opens in Chrome, Edge, Firefox,
+Adobe Acrobat and other PDF readers.
 
 <p align="center">
-  <img src="docs/images/showcase-p1.png" width="380" alt="Halaman contoh: teks, 14 font standar, bentuk, gambar JPEG">
-  <img src="docs/images/showcase-p3.png" width="380" alt="Halaman contoh: font Unicode tertanam, PNG transparan, rotasi dan watermark">
-  <img src="docs/images/report-p1.png" width="380" alt="Laporan keuangan multi-halaman dari layout engine: paragraf justify, daftar, tabel dengan rowspan dan colspan">
+  <img src="docs/images/showcase-p1.png" width="380" alt="Sample page: text in the 14 standard fonts, shapes, JPEG image">
+  <img src="docs/images/showcase-p3.png" width="380" alt="Sample page: embedded Unicode fonts, transparent PNG, rotation and watermark">
+  <img src="docs/images/report-p1.png" width="380" alt="Multi-page finance report from the layout engine: justified paragraphs, lists, tables with row and column spans">
 </p>
+
+## Installation
+
+```bash
+dotnet add package LifeOS.Pdf
+```
+
+Nothing else to install, on a developer machine or a server: the package is
+100% managed code with no native libraries and no `System.Drawing`, so it runs
+on Linux, Windows, macOS, Docker and serverless hosts alike. The 14 standard
+fonts need no font files; for TrueType fonts you ship the `.ttf` with your app.
 
 ## Status
 
-| Fase | Isi | Status |
+| Phase | Scope | Status |
 |---|---|---|
-| 0 | Core writer: halaman, teks 14 font standar, bentuk, JPEG, kompresi, metadata | ✅ v0.1 |
-| 1 | Font TrueType + Unicode, PNG transparan, gambar → PDF, rotasi & opacity | ✅ v0.2 |
-| 2 | Layout engine: paragraf, tabel multi-halaman, header/footer, kerning, font fallback | ✅ v0.3 |
-| 3 | Laporan dari template (invoice, slip gaji, laporan keuangan) | berikutnya |
-| 4 | Buat QR & barcode (vektor, PNG, SVG) | rencana |
-| 5 | Link, bookmark, lampiran, anotasi | rencana |
-| 6 | Buka PDF, merge, split, watermark, kompres | rencana |
-| 7 | Ekstrak teks, gambar, tabel (CSV) | rencana |
-| 8 | Form: buat, isi, flatten | rencana |
-| 9 | Enkripsi & tanda tangan digital | rencana |
-| 10 | Render ke gambar, baca QR/barcode, OCR (package terpisah) | rencana |
-| 11 | HTML → PDF (wkhtmltopdf & Chromium, package terpisah) | rencana |
-| 12 | PDF/A, PDF/UA, gradien, layer, e-invoice | rencana |
+| 0 | Core writer: pages, text in the 14 standard fonts, shapes, JPEG, compression, metadata | ✅ v0.1 |
+| 1 | TrueType fonts with full Unicode, transparent PNG, image → PDF, rotation & opacity | ✅ v0.2 |
+| 2 | Layout engine: paragraphs, multi-page tables, header/footer, kerning, font fallback | ✅ v0.3 |
+| 3 | Reports from templates (invoice, receipt, payslip, finance report) | in progress |
+| 4 | QR codes & barcodes (vector, PNG, SVG) | planned |
+| 5 | Links, bookmarks, attachments, annotations | planned |
+| 6 | Open existing PDFs: merge, split, watermark, compress | planned |
+| 7 | Extract text, images and tables (CSV) | planned |
+| 8 | Forms: create, fill, flatten | planned |
+| 9 | Encryption & digital signatures | planned |
+| 10 | Render to images, read QR/barcodes, OCR (separate packages) | planned |
+| 11 | HTML → PDF (wkhtmltopdf & Chromium, separate package) | planned |
+| 12 | PDF/A, PDF/UA, gradients, layers, e-invoicing | planned |
 
-Detail tiap fase dan pemetaan use case ada di [docs/PHASES.md](docs/PHASES.md).
+The full roadmap and use-case mapping is in [docs/PHASES.md](docs/PHASES.md).
 
-## Contoh
+## Quick start
 
 ```csharp
 using LifeOS.Pdf;
@@ -44,29 +55,29 @@ using LifeOS.Pdf.Fonts;
 using LifeOS.Pdf.Images;
 
 var doc = new PdfDocument();
-doc.Info.Title = "Laporan Bulanan";
+doc.Info.Title = "Monthly report";
 
 var page = doc.AddPage(PageSize.A4);
-var g = page.Graphics; // titik (0,0) di kiri-atas, satuan point (1/72 inch)
+var g = page.Graphics; // origin (0,0) at the top-left, units in points (1/72 inch)
 
-g.DrawText("Halo dunia", new PdfFont(StandardFont.HelveticaBold, 24), 72, 72);
-g.DrawTextBox("Paragraf panjang otomatis dipotong per baris sesuai lebar kotak.",
+g.DrawText("Hello world", new PdfFont(StandardFont.HelveticaBold, 24), 72, 72);
+g.DrawTextBox("Long paragraphs are wrapped automatically to the width of the box.",
     new PdfFont(StandardFont.TimesRoman, 12), 72, 120, width: 300);
 g.DrawRoundedRectangle(new PdfPen(PdfColor.Blue, 1), PdfColor.FromHex("#DBEAFE"), 72, 200, 200, 60, radius: 8);
-g.DrawText("Rp1.350.000", new PdfFont(StandardFont.Courier, 12), 272, 220, align: TextAlign.Right);
-g.DrawImage(PdfImage.FromFile("foto.jpg"), 72, 300, width: 250); // tinggi mengikuti rasio
+g.DrawText("$1,350.00", new PdfFont(StandardFont.Courier, 12), 272, 220, align: TextAlign.Right);
+g.DrawImage(PdfImage.FromFile("photo.jpg"), 72, 300, width: 250); // height keeps the aspect ratio
 
-doc.Save("laporan.pdf");
+doc.Save("report.pdf");
 ```
 
-### Font TrueType & Unicode, PNG, watermark
+### TrueType fonts & Unicode, PNG, watermark
 
 ```csharp
-var noto = PdfFontFace.FromFile("NotoSans-Regular.ttf");   // .ttf atau .ttc
+var noto = PdfFontFace.FromFile("NotoSans-Regular.ttf");   // .ttf or .ttc
 g.DrawText("Tiếng Việt · Ελληνικά · Русский · 日本語*", new PdfFont(noto, 12), 72, 400);
-// *selama font-nya punya glyph — cek dulu dengan noto.HasGlyph("日本語")
+// *as long as the font has the glyphs — check first with noto.HasGlyph("日本語")
 
-g.DrawImage(PdfImage.FromFile("logo.png"), 400, 40, 120);   // PNG transparan
+g.DrawImage(PdfImage.FromFile("logo.png"), 400, 40, 120);   // transparent PNG
 
 using (g.Save())
 {
@@ -76,63 +87,64 @@ using (g.Save())
 }
 ```
 
-Font di-*subset* otomatis (hanya glyph yang dipakai ikut tertanam) dan teks tetap
-bisa di-copy serta dicari di viewer.
+Fonts are subset automatically (only the glyphs you use are embedded) and text
+stays selectable and searchable in viewers.
 
-### Laporan multi-halaman (layout engine)
+### Multi-page reports (layout engine)
 
-Tidak perlu menghitung koordinat: susun konten, library yang memotong baris,
-membuat halaman baru, mengulang header tabel, dan mengisi "Halaman X dari Y".
+No coordinates needed: describe the content, and the library breaks lines,
+creates pages, repeats table headers and fills in "Page X of Y".
 
 ```csharp
 using LifeOS.Pdf.Layout;
 
 var doc = new FlowDocument();
 doc.Styles.Normal = new TextStyle { Family = FontFamily.Helvetica, Size = 10,
-    Fallbacks = { FontFamily.FromFiles("NotoSans-Regular.ttf") } };   // untuk karakter non-Latin
+    Fallbacks = { FontFamily.FromFiles("NotoSans-Regular.ttf") } };   // for non-Latin characters
 
 var section = doc.AddSection(new PageSetup { PageSize = PageSize.A4 });
-section.Footer.AddParagraph().AddText("Halaman ").AddPageNumber().AddText(" dari ").AddPageCount()
+section.Footer.AddParagraph().AddText("Page ").AddPageNumber().AddText(" of ").AddPageCount()
     .Format.Alignment = ParagraphAlignment.Center;
 
-section.AddHeading("Laporan Keuangan November 2026");
+section.AddHeading("Finance report — November 2026");
 section.AddParagraph()
-    .AddText("Total pengeluaran ")
-    .AddText("Rp7.482.500", new TextStyle { Bold = true })
-    .AddText(", turun 12% dari bulan lalu.");
+    .AddText("Total spending ")
+    .AddText("$7,482.50", new TextStyle { Bold = true })
+    .AddText(", down 12% from last month.");
 
 var table = section.AddTable();
 table.AddColumn(ColumnWidth.Auto);
 table.AddColumn(ColumnWidth.Relative());
 table.AddColumn(ColumnWidth.Fixed(90), ParagraphAlignment.Right);
-table.HeaderRows = 1;                                   // diulang di setiap halaman
+table.HeaderRows = 1;                                   // repeated on every page
 table.AlternateRowBackground = PdfColor.FromHex("#F9FAFB");
-table.AddRow("Tanggal", "Catatan", "Nominal");
-foreach (var t in transaksi)
-    table.AddRow(t.Tanggal, t.Catatan, t.Nominal);
+table.AddRow("Date", "Note", "Amount");
+foreach (var t in transactions)
+    table.AddRow(t.Date, t.Note, t.Amount);
 
-doc.Save("laporan.pdf");
+doc.Save("report.pdf");
 ```
 
-Juga tersedia: justify, daftar bullet/bernomor, colspan/rowspan, gambar dalam alur,
-dua kolom, keep-with-next, page break, header/footer berbeda di halaman pertama.
-Contoh lengkap: [ReportSample.cs](samples/LifeOS.Pdf.Samples/ReportSample.cs).
+Also available: justified text, bulleted/numbered lists, column and row spans,
+images in the flow, multiple columns, keep-with-next, page breaks, a different
+header/footer on the first page. Full example:
+[ReportSample.cs](samples/LifeOS.Pdf.Samples/ReportSample.cs).
 
-### Gambar → PDF
+### Images → PDF
 
 ```csharp
 using LifeOS.Pdf.Conversion;
 
-var scan = ImageToPdf.Convert(new[] { "hal1.jpg", "hal2.png" },
+var scan = ImageToPdf.Convert(new[] { "page1.jpg", "page2.png" },
     new ImageToPdfOptions { PageSize = PageSize.A4, Margin = 36 });
 scan.Save("scan.pdf");
 ```
 
-Contoh lengkap ada di [samples/LifeOS.Pdf.Samples](samples/LifeOS.Pdf.Samples/Program.cs).
+More examples in [samples/LifeOS.Pdf.Samples](samples/LifeOS.Pdf.Samples/Program.cs).
 
 ## Build & test
 
-Butuh .NET SDK 8 atau lebih baru (SDK 10 juga membangun target `net10.0`).
+Requires the .NET SDK 8 or newer (SDK 10 also builds the `net10.0` target).
 
 ```bash
 dotnet build -c Release
@@ -140,22 +152,22 @@ dotnet test -c Release
 dotnet run --project samples/LifeOS.Pdf.Samples -f net8.0 -- out/net8.0
 ```
 
-Validasi eksternal (Python 3.10+):
+External validation (Python 3.10+, development only — not needed to use the library):
 
 ```bash
 pip install pikepdf pypdf pypdfium2 fonttools opentype-sanitizer
 python tools/validate_pdf.py out/net8.0/showcase.pdf --render-dir out/png
 ```
 
-## Cara pengembangan
+## How it is developed
 
-Repo ini memakai alur kerja yang sama dengan LifeOS:
-**analyst → architect → developer → qa**, satu fase per rilis. Aturan proyek
-ada di [CLAUDE.md](CLAUDE.md), peran agent di [.claude/agents](.claude/agents),
-dan playbook tiap fase di [docs/PHASES.md](docs/PHASES.md).
+Each phase goes through **analyst → architect → developer → QA**, one phase per
+release. Project rules are in [CLAUDE.md](CLAUDE.md), the agent roles in
+[.claude/agents](.claude/agents), and the per-phase playbook and documents in
+[docs/](docs/PHASES.md) (internal documents are written in Indonesian).
 
-## Lisensi
+## License
 
-[MIT](LICENSE). Kode ditulis berdasarkan spesifikasi ISO 32000, tidak
-menyalin dari library berlisensi AGPL atau proprietary. Lihat
+[MIT](LICENSE). The code is written from the ISO 32000 specification and does
+not copy from AGPL-licensed or proprietary libraries. See
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
