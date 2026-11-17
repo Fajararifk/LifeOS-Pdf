@@ -1,9 +1,10 @@
 # Releasing
 
-Six packages are published from one version:
+Seven packages are published from one version:
 
 `LifeOS.Pdf`, `LifeOS.Pdf.Signing`, `LifeOS.Pdf.Rendering`,
-`LifeOS.Pdf.Barcode.Scanning`, `LifeOS.Pdf.Ocr`, `LifeOS.Pdf.Scanning`.
+`LifeOS.Pdf.Barcode.Scanning`, `LifeOS.Pdf.Ocr`, `LifeOS.Pdf.Scanning`, and the
+`LifeOS.Pdf.All` meta-package (dependencies only, no code: the six above in one install).
 
 The version lives in `VersionPrefix` (`Directory.Build.props`) and must match the tag and the
 top entry of `CHANGELOG.md`.
@@ -22,7 +23,7 @@ $env:NUGET_API_KEY = 'nuget-api-key'          # scope: "Push new packages and pa
 pwsh tools/release.ps1
 ```
 
-The script packs all six projects with `-p:Version=<VersionPrefix>`, lists what it built, then
+The script packs all seven projects with `-p:Version=<VersionPrefix>`, lists what it built, then
 pushes with `--skip-duplicate` (re-running is harmless). Useful options:
 
 | Option | Effect |
@@ -61,7 +62,7 @@ If Actions is unavailable, use the local route.
 2. `dotnet run -c Release --project samples/LifeOS.Pdf.Samples` and
    `python tools/validate_pdf.py` pass.
 3. `CHANGELOG.md` has the version with a date; `VersionPrefix` matches.
-4. `pwsh tools/release.ps1 -PackOnly` produced six `.nupkg` files.
+4. `pwsh tools/release.ps1 -PackOnly` produced seven `.nupkg` files.
 5. Publish, then check `https://www.nuget.org/packages/LifeOS.Pdf/<version>` (indexing takes a
    few minutes).
 

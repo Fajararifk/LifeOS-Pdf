@@ -25,6 +25,8 @@ Before v1.0, a minor version may contain breaking changes (always listed here).
 - `BuiltInTemplates.TableReport` (and `BuiltInTemplate.TableReport`): generic table report that
   builds its columns from the data, right-aligns numeric columns and adds a total row, so one
   template renders any CSV/XLSX export.
+- `LifeOS.Pdf.All`: meta-package that pulls the core and the five companions in one install
+  (.NET 8+, dependencies only — no code of its own).
 
 ## [1.0.0] — Phase 9: Security (encryption)
 

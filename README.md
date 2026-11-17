@@ -37,6 +37,12 @@ dotnet add package LifeOS.Pdf.Ocr              # OCR (Tesseract)
 dotnet add package LifeOS.Pdf.Scanning         # render + barcode + OCR
 ```
 
+Or install the core and all five companions at once (.NET 8+):
+
+```bash
+dotnet add package LifeOS.Pdf.All
+```
+
 ## Usage
 
 Read the **[step-by-step tutorial](docs/tutorial.md)** — one runnable example for every

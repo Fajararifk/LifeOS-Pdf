@@ -47,6 +47,12 @@ dotnet add package LifeOS.Pdf.Ocr              # OCR (native Tesseract + tessdat
 dotnet add package LifeOS.Pdf.Scanning         # combined render + barcode + OCR
 ```
 
+Or take everything at once (.NET 8+, pulls the core and the five companions):
+
+```bash
+dotnet add package LifeOS.Pdf.All
+```
+
 ---
 
 ## 2. Your first PDF (Phase 0)

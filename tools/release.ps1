@@ -39,7 +39,8 @@ try {
         'src/LifeOS.Pdf.Rendering',
         'src/LifeOS.Pdf.Barcode.Scanning',
         'src/LifeOS.Pdf.Ocr',
-        'src/LifeOS.Pdf.Scanning'
+        'src/LifeOS.Pdf.Scanning',
+        'src/LifeOS.Pdf.All'
     )
 
     function Get-PackageId([string] $fileName) {

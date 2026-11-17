@@ -132,7 +132,8 @@ jobs:
             src/LifeOS.Pdf.Rendering \
             src/LifeOS.Pdf.Barcode.Scanning \
             src/LifeOS.Pdf.Ocr \
-            src/LifeOS.Pdf.Scanning
+            src/LifeOS.Pdf.Scanning \
+            src/LifeOS.Pdf.All
           do
             dotnet pack "$project" -c Release -o artifacts -p:Version="$version"
           done
