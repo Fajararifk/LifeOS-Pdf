@@ -57,3 +57,47 @@ di enam runtime dan lolos validator 5 engine. Catatan di bawah tidak memblokir v
    `Discount`) → jalankan sample lagi → baris diskon hilang, total & terbilang ikut berubah.
 3. Salin `BuiltInTemplates.GetSource(BuiltInTemplate.Invoice)` ke file, ganti warna/teks,
    render dengan `PdfTemplate.Load` tanpa compile ulang aplikasi.
+
+---
+
+## Addendum (17 Nov): CSV/XLSX table report
+
+**Verdict: PASS**
+
+Permintaan: report template yang bisa memakai data CSV atau XLSX (bukan hanya JSON/C# object).
+
+### Yang ditambahkan
+- `TabularData` (`src/LifeOS.Pdf/Templates/TabularData.cs`), hanya BCL:
+  - `FromCsv`/`FromCsvFile`: RFC 4180 (kutip, kutip ganda, CRLF/LF), delimiter `,`/`;`/tab
+    dideteksi otomatis dari baris pertama.
+  - `FromXlsx`/`FromXlsxFile`: sheet pertama atau bernama; shared strings, inline string,
+    angka, boolean, error, dan sel bertanggal (numFmt bawaan 14-22/45-47 atau kode kustom
+    berisi `y`/`d`) lewat `DateTime.FromOADate`.
+  - Header menjadi `Columns` (teks asli) dan `Fields` (identifier: `No. Faktur` -> `No_Faktur`,
+    duplikat `_2`, header kosong `ColumnN`).
+  - `Aligns` (numerik -> `right`), `Totals`/`HasTotals` untuk baris total, `Title`/`Subtitle`.
+- `BuiltInTemplate.TableReport` + `BuiltInTemplates.TableReport` (`Resources/table-report.xml`):
+  kolom dibuat dari data (`<foreach in="Columns" as="c"><column .../>`), sel `{{ row[f] }}`,
+  kolom angka rata kanan, baris TOTAL (`rupiah`), zebra, header berulang, footer halaman.
+- Sample: `samples/.../Assets/data/table-report.csv` + `TemplatesSample` menulis
+  `template-table-report.pdf`.
+- Dokumentasi: `docs/templates.md` (bagian "CSV and XLSX data"), `docs/tutorial.md` bagian 5,
+  `README.md`, `CHANGELOG.md`.
+
+### Verifikasi
+- build Release: OK, 0 warning, 0 error (netstandard2.0-net10.0)
+- test: OK, `TabularDataTests` 15 test x 3 runtime (net8/9/10): CSV kutip/CRLF/semicolon/tab,
+  sanitasi & duplikat header, align/total, XLSX shared string + angka + boolean + tanggal
+  (numFmt dan sel ISO `t="d"`), sheet bernama dengan target absolut, template multi-kolom
+  (8 kolom), data kosong, template sendiri dengan `row.No_Faktur`, file contoh.
+- validator: OK, `tools/validate_pdf.py` -> qpdf + pypdf + pdfium + fontTools + OTS OK (1 halaman)
+- visual (PDFium): OK, header "Tanggal/No. Faktur/Pelanggan/Kategori/Jumlah", 4 baris,
+  baris TOTAL `Rp4.850.000`, footer "Halaman 1 dari 1".
+
+### Batasan (bukan blocker)
+- XLSX hanya membaca nilai (formula memakai hasil cache), tanpa style/merge/format sel lain.
+- Nilai sel dikembalikan sebagai teks apa adanya; pemformatan (`rupiah`, `number`, `date`)
+  dilakukan di template. Angka dengan pemisah ribuan gaya Indonesia (`1.250.000`) tidak
+  terdeteksi numerik (dianggap teks).
+- Baris TOTAL menaruh label di kolom pertama, sehingga jumlah kolom pertama (bila numerik)
+  tidak ditampilkan.

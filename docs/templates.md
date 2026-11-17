@@ -1,6 +1,6 @@
 # Template reference
 
-Templates turn **data** (a C# object or JSON) into a PDF without layout code.
+Templates turn **data** (a C# object, JSON, or a CSV/XLSX file) into a PDF without layout code.
 A template is an XML file you can edit without recompiling; it is converted into a
 `FlowDocument`, so everything the layout engine can do is available.
 
@@ -23,10 +23,57 @@ BuiltInTemplates.Invoice.Render(data).Save("invoice.pdf");          // ready-mad
 | `BuiltInTemplates.Payslip` | Payslip (*slip gaji*): earnings, deductions, take-home pay | [payslip.json](../samples/LifeOS.Pdf.Samples/Assets/data/payslip.json) |
 | `BuiltInTemplates.MonthlyReport` | Monthly finance report: totals, saving rate, spending by category vs budget, transactions | [monthly-report.json](../samples/LifeOS.Pdf.Samples/Assets/data/monthly-report.json) |
 | `BuiltInTemplates.Certificate` | Certificate with up to three signers, A4 landscape | [certificate.json](../samples/LifeOS.Pdf.Samples/Assets/data/certificate.json) |
+| `BuiltInTemplates.TableReport` | Generic table report for CSV/XLSX data: columns come from the headers, numeric columns are right-aligned and summed | [table-report.csv](../samples/LifeOS.Pdf.Samples/Assets/data/table-report.csv) |
 
 Each template lists its data fields in a comment at the top of its XML;
 `BuiltInTemplates.GetSource(BuiltInTemplate.Invoice)` returns the XML as a starting
 point for your own. Built-in templates are in Indonesian.
+
+## CSV and XLSX data
+
+`TabularData` reads tabular files using the BCL only (no extra package) and feeds the
+generic table report or any template of your own.
+
+```csharp
+using LifeOS.Pdf.Templates;
+
+// CSV: the first row is the header; ',' ';' and tab are detected.
+var sales = TabularData.FromCsvFile("penjualan.csv");
+// var sales = TabularData.FromCsv(text, delimiter: ';', hasHeader: true);
+
+// XLSX: the first sheet by default, or a named one.
+var stock = TabularData.FromXlsxFile("stok.xlsx", sheetName: "Detail");
+
+sales.Title = "Rekap Penjualan";
+sales.Subtitle = "November 2026";
+BuiltInTemplates.TableReport.Render(sales).Save("rekap.pdf");
+
+// …or your own template, with fixed columns and formatting:
+PdfTemplate.Load("templates/sales.xml").Render(sales).Save("sales.pdf");
+```
+
+| Member | Meaning |
+|---|---|
+| `Columns` | header text as written in the file (for display) |
+| `Fields` | header text as identifiers: `No. Faktur` → `No_Faktur`, so `{{ row.No_Faktur }}` works |
+| `Rows` | one dictionary per data row: `{{ row.Jumlah }}`, or generically `{{ row[f] }}` |
+| `Aligns` | `"right"` for numeric columns, `"left"` otherwise (parallel to `Columns`) |
+| `Totals` / `HasTotals` | sum of every numeric column; whether at least one exists |
+| `Title` / `Subtitle` | optional report heading (used by the table report) |
+
+Notes:
+
+- Headers are reduced to valid identifiers: a run of punctuation becomes one `_`, a leading
+  digit gets a `_` prefix, duplicates get `_2`, and empty headers become `Column1`, `Column2`, …
+- Values stay text, exactly as read. Format them in the template: `{{ row.Jumlah | number:0 }}`,
+  `{{ row.Harga | rupiah }}`. XLSX date cells arrive as `yyyy-MM-dd` and work with
+  `{{ row.Tanggal | date:"d MMM yyyy" }}`.
+- XLSX reads values only (a formula contributes its cached result): shared/inline strings,
+  numbers, booleans, errors, date-formatted cells (built-in formats 14–22/45–47 and custom
+  codes containing `y` or `d`) and ISO date cells (`t="d"`).
+- CSV follows RFC 4180: quoted fields (`"a,b"`), doubled quotes (`""`) and CRLF or LF rows.
+- `TableReport` emits one `<column>` per header, so a single template renders any export.
+  For a fixed layout, declare your own `<column>` elements and read the fields by name.
 
 ## Options
 

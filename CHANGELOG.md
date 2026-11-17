@@ -19,6 +19,12 @@ Before v1.0, a minor version may contain breaking changes (always listed here).
 - `LifeOS.Pdf.Scanning` (`DocumentScanner`): one call renders a page (or all pages) and runs
   barcode + OCR (`ScanPage`/`ScanAll`), returning text, word boxes and barcodes.
 - `PdfGraphics.DrawInvisibleText`: text that is selectable/searchable but not painted (OCR layer).
+- `TabularData`: reads CSV (RFC 4180 quoting, `,`/`;`/tab auto-detected) and XLSX (first or named
+  sheet; shared/inline strings, numbers, booleans, dates) into columns and row dictionaries, with
+  numeric detection (`Aligns`) and per-column sums (`Totals`). Works with BCL only.
+- `BuiltInTemplates.TableReport` (and `BuiltInTemplate.TableReport`): generic table report that
+  builds its columns from the data, right-aligns numeric columns and adds a total row, so one
+  template renders any CSV/XLSX export.
 
 ## [1.0.0] — Phase 9: Security (encryption)
 

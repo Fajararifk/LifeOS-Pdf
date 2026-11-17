@@ -17,5 +17,11 @@ namespace LifeOS.Pdf.Templates
 
         /// <summary>Certificate (sertifikat) with up to three signers. A4 landscape.</summary>
         Certificate,
+
+        /// <summary>
+        /// Generic table report for CSV/XLSX data (<see cref="TabularData"/>): the columns and rows
+        /// follow the data, numeric columns are right-aligned and summed.
+        /// </summary>
+        TableReport,
     }
 }

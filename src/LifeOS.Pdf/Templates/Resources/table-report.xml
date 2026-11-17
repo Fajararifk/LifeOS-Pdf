@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  LifeOS.Pdf built-in template: generic table report (laporan tabel) for CSV or XLSX data.
+
+  Data: TabularData.FromCsv(...) / TabularData.FromXlsx(...) (see docs/templates.md), or any
+  object with these members:
+    Title    string?                       — report title
+    Subtitle string?                       — period / description (optional)
+    Columns  list of display headers       — column titles, in order
+    Fields   list of keys, parallel to Columns — row keys, e.g. "No_Faktur"
+    Rows     list of row dictionaries      — read a value with row.Field or row[field]
+    Aligns   list parallel to Columns      — "right" for numeric columns, else "left"
+    HasTotals bool                         — true when at least one column is numeric
+    Totals   map field → sum               — totals of the numeric columns
+
+  The column and cell count follow the data, so the same template renders any CSV/XLSX.
+  The last row sums the numeric columns (first column shows "TOTAL").
+-->
+<document title="{{ Title | default:'Laporan' }}" author="LifeOS.Pdf" subject="{{ Subtitle }}">
+  <styles>
+    <normal family="helvetica" size="8.5" color="#1F2937"/>
+    <heading level="1" size="17" color="#0F766E"/>
+    <tableHeader bold="true"/>
+  </styles>
+
+  <section size="A4" margin="16mm 15mm 15mm 15mm" differentFirstPage="true">
+    <header>
+      <table border="none" grid="none" headerBackground="none" padding="0" spaceAfter="2">
+        <column width="*"/>
+        <column width="auto" align="right"/>
+        <row>
+          <cell size="8" bold="true" color="#0F766E">{{ Title | default:"Laporan" }}</cell>
+          <cell size="8" color="#6B7280">{{ Subtitle }}</cell>
+        </row>
+      </table>
+      <hr spaceBefore="2" spaceAfter="0"/>
+    </header>
+    <footer><p align="center" size="7.5" color="#6B7280">Halaman <pageNumber/> dari <pageCount/></p></footer>
+    <firstFooter><p align="center" size="7.5" color="#6B7280">Halaman <pageNumber/> dari <pageCount/></p></firstFooter>
+
+    <h1>{{ Title | default:"Laporan" }}</h1>
+    <p size="8.5" color="#6B7280" spaceAfter="2" if="Subtitle">{{ Subtitle }}</p>
+    <p size="8" color="#9CA3AF">{{ Rows | count }} baris · {{ Columns | count }} kolom</p>
+
+    <if test="Columns | count">
+      <table headerRows="1" zebra="#F9FAFB" padding="4 3" spaceBefore="8">
+        <foreach in="Columns" as="c" index="i">
+          <column width="*" align="{{ Aligns[i] }}"/>
+        </foreach>
+        <row bg="#F3F4F6">
+          <foreach in="Columns" as="c">
+            <cell bold="true" size="8" color="#111827">{{ c }}</cell>
+          </foreach>
+        </row>
+        <foreach in="Rows" as="row">
+          <row>
+            <foreach in="Fields" as="f">
+              <cell size="8">{{ row[f] }}</cell>
+            </foreach>
+          </row>
+        </foreach>
+        <row if="!(Rows | count)">
+          <cell colspan="{{ Columns | count }}"><i>Tidak ada data.</i></cell>
+        </row>
+        <row if="HasTotals" bg="#ECFDF5">
+          <foreach in="Fields" as="f" index="i">
+            <cell bold="true" size="8" align="{{ Aligns[i] }}" color="#065F46">
+              <if test="i == 0"><p>TOTAL</p></if>
+              <else><p>{{ Totals[f] | rupiah }}</p></else>
+            </cell>
+          </foreach>
+        </row>
+      </table>
+    </if>
+    <p if="!(Columns | count)" color="#6B7280"><i>Tidak ada data untuk ditampilkan.</i></p>
+  </section>
+</document>

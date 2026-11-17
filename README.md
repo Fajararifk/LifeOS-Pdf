@@ -49,7 +49,7 @@ feature, from your first PDF to forms, encryption and scanned documents.
 | 0 | Core writer: pages, text in the 14 standard fonts, shapes, JPEG, compression, metadata | ✅ v0.1 |
 | 1 | TrueType fonts with full Unicode, transparent PNG, image → PDF, rotation & opacity | ✅ v0.2 |
 | 2 | Layout engine: paragraphs, multi-page tables, header/footer, kerning, font fallback | ✅ v0.3 |
-| 3 | Reports from templates (invoice, receipt, payslip, finance report, certificate) | ✅ v0.4 |
+| 3 | Reports from templates (invoice, receipt, payslip, finance report, certificate, table report for CSV/XLSX) | ✅ v0.4 |
 | 4 | QR codes & barcodes (vector, PNG, SVG), QRIS | ✅ v0.5 |
 | 5 | Links, bookmarks, table of contents, attachments, annotations | ✅ v0.6 |
 | 6 | Open existing PDFs: merge, split, watermark, page numbers, n-up, compress | ✅ v0.7 |

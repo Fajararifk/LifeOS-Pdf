@@ -236,8 +236,8 @@ multiple columns per section, and a `LayoutException` when content cannot fit.
 ## 5. Report templates (Phase 3)
 
 Keep the layout in an XML template (editable without recompiling) and fill it with a
-C# object or JSON. Five built-in templates ship: invoice, receipt (*kwitansi*),
-payslip, monthly finance report and certificate.
+C# object, JSON, or a CSV/XLSX file. Six built-in templates ship: invoice, receipt
+(*kwitansi*), payslip, monthly finance report, certificate, and a generic table report.
 
 ```csharp
 using LifeOS.Pdf.Templates;
@@ -245,6 +245,11 @@ using LifeOS.Pdf.Templates;
 // Built-in template from JSON
 var invoice = BuiltInTemplates.Invoice.Render(TemplateData.FromJson(json));
 invoice.Save("invoice.pdf");
+
+// CSV or XLSX → table report (columns follow the file's headers)
+var sales = TabularData.FromCsvFile("penjualan.csv");       // or FromXlsxFile("stok.xlsx", "Detail")
+sales.Title = "Rekap Penjualan";
+BuiltInTemplates.TableReport.Render(sales).Save("rekap.pdf");
 
 // Your own template + a C# object
 var template = PdfTemplate.Load("templates/order.xml");
@@ -254,6 +259,20 @@ template.Render(new { Number = "ORD-17", Customer = customer, Items = items })
 // Errors carry the line and column
 try { template.Render(new { }); }
 catch (TemplateException ex) { Console.WriteLine(ex.Message); }
+```
+
+`TabularData` keeps values as text and also exposes `Columns`, `Fields` (identifier form,
+`No. Faktur` → `No_Faktur`), `Rows`, `Aligns` (`"right"` for numeric columns) and `Totals`,
+so your own template can use a fixed layout:
+
+```xml
+<foreach in="Rows" as="row">
+  <row>
+    <cell>{{ row.Tanggal | date:"d MMM" }}</cell>
+    <cell>{{ row.Pelanggan }}</cell>
+    <cell align="right">{{ row.Jumlah | rupiah }}</cell>
+  </row>
+</foreach>
 ```
 
 ```xml

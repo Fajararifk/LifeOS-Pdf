@@ -22,6 +22,14 @@ namespace LifeOS.Pdf.Templates
 
         public static PdfTemplate Certificate => Get(BuiltInTemplate.Certificate);
 
+        /// <summary>
+        /// A table report for <see cref="TabularData"/> (CSV/XLSX): columns come from the data.
+        /// <code>
+        /// BuiltInTemplates.TableReport.Render(TabularData.FromCsvFile("sales.csv")).Save("sales.pdf");
+        /// </code>
+        /// </summary>
+        public static PdfTemplate TableReport => Get(BuiltInTemplate.TableReport);
+
         /// <summary>A built-in template with custom options (language, fallback fonts, named images…).</summary>
         public static PdfTemplate Get(BuiltInTemplate template, TemplateOptions? options = null)
         {
@@ -55,6 +63,7 @@ namespace LifeOS.Pdf.Templates
                 case BuiltInTemplate.Payslip: return "LifeOS.Pdf.Templates.payslip.xml";
                 case BuiltInTemplate.MonthlyReport: return "LifeOS.Pdf.Templates.monthly-report.xml";
                 case BuiltInTemplate.Certificate: return "LifeOS.Pdf.Templates.certificate.xml";
+                case BuiltInTemplate.TableReport: return "LifeOS.Pdf.Templates.table-report.xml";
                 default: throw new ArgumentOutOfRangeException(nameof(template), template, "Unknown built-in template.");
             }
         }
