@@ -92,6 +92,8 @@ python tools/validate_pdf.py out/net8.0/showcase.pdf --render-dir out/png
 - **[Step-by-step tutorial](docs/tutorial.md)** — the full walkthrough with runnable examples.
 - [docs/PHASES.md](docs/PHASES.md) — full roadmap and use-case mapping.
 - [docs/templates.md](docs/templates.md) — the template language reference.
+- [docs/performance.md](docs/performance.md) — benchmarks per phase.
+- [docs/releasing.md](docs/releasing.md) — how to publish the packages (with or without CI).
 - [samples/LifeOS.Pdf.Samples](samples/LifeOS.Pdf.Samples/Program.cs) — a sample app with
   every feature.
 
