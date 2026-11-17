@@ -42,6 +42,21 @@ try {
         'src/LifeOS.Pdf.Scanning'
     )
 
+    function Get-PackageId([string] $fileName) {
+        return $fileName -replace '\.[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?\.nupkg$', ''
+    }
+
+    function Test-PackageExists([string] $id) {
+        try {
+            $uri = 'https://api.nuget.org/v3-flatcontainer/' + $id.ToLowerInvariant() + '/index.json'
+            Invoke-RestMethod -Uri $uri -TimeoutSec 10 | Out-Null
+            return $true
+        }
+        catch {
+            return $false
+        }
+    }
+
     if (-not $Version) {
         [xml] $props = Get-Content 'Directory.Build.props'
         $node = $props.SelectSingleNode('/Project/PropertyGroup/VersionPrefix')
@@ -100,11 +115,19 @@ try {
     }
 
     Write-Host ''
+    foreach ($package in $packages) {
+        $id = Get-PackageId $package.Name
+        if (-not (Test-PackageExists $id)) {
+            Write-Host "  note: $id is new on nuget.org; the key must allow 'Push new packages and package versions'."
+        }
+    }
+
+    Write-Host ''
     Write-Host "Publishing to $Source"
     foreach ($package in $packages) {
         dotnet nuget push $package.FullName --api-key $key --source $Source --skip-duplicate
         if ($LASTEXITCODE -ne 0) {
-            throw "dotnet nuget push failed for $($package.Name)"
+            throw "dotnet nuget push failed for $($package.Name). A 403 on a new package id means the key is scoped to 'Push only package versions'; create a key with 'Push new packages and package versions'."
         }
     }
 

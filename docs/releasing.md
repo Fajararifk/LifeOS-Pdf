@@ -67,8 +67,12 @@ If Actions is unavailable, use the local route.
 
 ## Troubleshooting
 
-- **403 / 401 from nuget.org**: the key is invalid, expired, or lacks *Push new packages and
-  package versions*.
+- **403 on a brand-new package id** (`LifeOS.Pdf.Ocr`, …): the key is scoped to *Push only
+  package versions*, which can add versions only to packages that already exist. Create a key
+  with *Push new packages and package versions* (nuget.org → Account → API keys). The script
+  prints a note before pushing when an id is new; a partially failed run is safe to repeat
+  (`--skip-duplicate`).
+- **401**: the key is invalid or expired.
 - **409 Conflict**: that version already exists. NuGet versions are permanent — bump
   `VersionPrefix`; `--skip-duplicate` makes an accidental re-run a no-op instead.
 - **A package is missing from the feed**: the flat-container index
