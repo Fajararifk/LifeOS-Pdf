@@ -261,19 +261,72 @@ try { template.Render(new { }); }
 catch (TemplateException ex) { Console.WriteLine(ex.Message); }
 ```
 
-`TabularData` keeps values as text and also exposes `Columns`, `Fields` (identifier form,
-`No. Faktur` → `No_Faktur`), `Rows`, `Aligns` (`"right"` for numeric columns) and `Totals`,
-so your own template can use a fixed layout:
+### CSV and XLSX
+
+`TabularData` reads tabular files with the BCL only (no extra package). The first row is the
+header; the delimiter (`,` `;` or tab) is detected from that row.
+
+```csharp
+using LifeOS.Pdf.Templates;
+
+var sales = TabularData.FromCsvFile("penjualan.csv");           // or FromCsv(text, delimiter: ';')
+// var stock = TabularData.FromXlsxFile("stok.xlsx", "Detail"); // same API for XLSX (sheet name optional)
+
+sales.Title = "Rekap Penjualan";
+sales.Subtitle = "November 2026";
+
+var pdf = BuiltInTemplates.TableReport.Render(sales);
+pdf.Save("rekap.pdf");
+```
+
+That is the whole program. `TableReport` creates one column per header of the file, so the same
+template renders any export: numeric columns are right-aligned, the last row sums them (`TOTAL`,
+`rupiah`), the header repeats on every page and the footer shows the page number.
+
+What the template can read from `TabularData`:
+
+| Member | Meaning | Example |
+|---|---|---|
+| `Columns` | header text as written in the file | `No. Faktur` |
+| `Fields` | header as an identifier | `No_Faktur` |
+| `Rows` | one dictionary per data row | `{{ row.No_Faktur }}` |
+| `Aligns` | `"right"` for numeric columns | `align="{{ Aligns[i] }}"` |
+| `Totals` / `HasTotals` | sum of each numeric column | `{{ Totals.Jumlah \| rupiah }}` |
+| `Title` / `Subtitle` | report heading | `{{ Title }}` |
+
+With a fixed-column template of your own:
 
 ```xml
-<foreach in="Rows" as="row">
-  <row>
-    <cell>{{ row.Tanggal | date:"d MMM" }}</cell>
-    <cell>{{ row.Pelanggan }}</cell>
-    <cell align="right">{{ row.Jumlah | rupiah }}</cell>
+<table headerRows="1" zebra="#F9FAFB">
+  <column width="auto"/><column width="*"/><column width="110" align="right"/>
+  <row><cell>Tanggal</cell><cell>Pelanggan</cell><cell>Jumlah</cell></row>
+  <foreach in="Rows" as="row">
+    <row>
+      <cell>{{ row.Tanggal | date:"d MMM" }}</cell>
+      <cell>{{ row.Pelanggan }}</cell>
+      <cell>{{ row.Jumlah | rupiah }}</cell>
+    </row>
+  </foreach>
+  <row if="HasTotals" bg="#ECFDF5">
+    <cell colspan="2"><b>TOTAL</b></cell><cell><b>{{ Totals.Jumlah | rupiah }}</b></cell>
   </row>
-</foreach>
+</table>
 ```
+
+Notes:
+
+- Values stay text exactly as read; format them in the template (`| rupiah`, `| number:0`,
+  `| date:"d MMMM yyyy"`). XLSX date cells arrive as `yyyy-MM-dd`.
+- Headers are reduced to identifiers: `No. Faktur` → `No_Faktur`, duplicates get `_2`, a
+  leading digit gets `_` (`2026` → `_2026`), empty headers become `Column1`, `Column2`, …
+- XLSX reads values only: shared/inline strings, numbers, booleans, errors and dates
+  (numFmt or ISO `t="d"`). Styles, merged cells and images are ignored, and a formula
+  contributes its cached result.
+- CSV follows RFC 4180: `"a,b"` is one field and `""` is a literal quote; CRLF and LF both work.
+- Numbers using Indonesian thousand separators (`1.250.000`) are treated as text; use plain
+  `1250000` in the file and let `| rupiah` format it.
+
+### Your own template
 
 ```xml
 <document title="Order {{ Number }}">
@@ -619,9 +672,48 @@ foreach (var b in page.Barcodes) Console.WriteLine($"[{b.Format}] {b.Text}");
 IReadOnlyList<ScannedPage> pages = scanner.ScanAll(doc, new ScanOptions { Dpi = 200 });
 ```
 
-Native setup:
-- **Rendering:** provide the native PDFium library for your platform (copy it next to the app).
-- **OCR:** download `eng.traineddata` (and `ind.traineddata`) and pass the folder.
+`ScanOptions` turns the two steps on or off (`Barcode`, `Ocr`) and sets the DPI for the render.
+
+### Native setup
+
+- **Rendering:** `LifeOS.Pdf.Rendering` wraps PDFium through `PDFiumCore`, which ships the managed
+  wrapper only — the native library must sit next to the app: `pdfium.dll` on Windows, or the
+  matching `libpdfium.so` / `libpdfium.dylib`. Grab it from
+  <https://github.com/bblanchon/pdfium-binaries/releases> (or from any package that provides
+  PDFium for your runtime).
+- **OCR:** the `Tesseract` package copies its Windows natives to the output folder
+  (`x64\tesseract50.dll`, `x64\leptonica-1.82.0.dll`, and the x86 equivalents). On Linux/macOS
+  install Tesseract through the OS package manager instead (`apt install libtesseract5`,
+  `brew install tesseract`).
+- **Language data:** download the `.traineddata` files from
+  <https://github.com/tesseract-ocr/tessdata_fast> — at least `eng.traineddata` (plus
+  `ind.traineddata` for Indonesian and `osd.traineddata` for orientation detection) — and pass
+  that folder: `new OcrEngine("tessdata", "eng+ind")`.
+- **DPI:** 200–300 is the useful range for scanned text. Word boxes are converted to points with
+  `pixel × 72 / DPI`, so they line up with page coordinates whatever DPI you choose.
+
+### End-to-end: a scan that becomes searchable
+
+```csharp
+using System;
+using LifeOS.Pdf;
+using LifeOS.Pdf.Ocr;
+
+var doc = PdfDocument.Open("scan.pdf");
+using var ocr = new OcrEngine("tessdata", "ind+eng");
+
+ocr.MakeSearchable(doc, new OcrOptions { Dpi = 300 });   // invisible text layer on every page
+doc.Save("scan-searchable.pdf");
+
+// The page now answers text extraction and viewer search:
+var text = doc.ExtractText();
+Console.WriteLine(text.Substring(0, Math.Min(200, text.Length)));
+```
+
+Limits worth knowing: the invisible layer is written with Helvetica (WinAnsi), so Latin text is
+safe while other scripts may lose characters; on pages with `/Rotate` the layer can be offset
+because rendering follows the rotation (scanned pages are normally unrotated). `MakeSearchable`
+does not change how the page looks — the original image stays untouched.
 
 ---
 

@@ -1,9 +1,15 @@
 # Performance
 
 Measured with `benchmarks/LifeOS.Pdf.Benchmarks` (Release, .NET 8.0.34, Windows laptop; best of
-7 runs after ≥ 1 s warm-up). "Before" is v0.6.0 (commit `e978b42`), "after" is the optimized
-code. Output of every phase-0…5 scenario is **byte-identical** before and after (verified by
-hashing 7 fixed documents: graphics, report with TOC/tables/lists, and all 5 built-in templates).
+7 runs after ≥ 1 s warm-up). Two groups:
+
+- **Phases 0–6 — optimization pass.** "Before" is v0.6.0 (commit `e978b42`), "after" is the
+  optimized code. Output of every scenario is **byte-identical** before and after (verified by
+  hashing 7 fixed documents: graphics, report with TOC/tables/lists, and all 5 built-in templates).
+- **Phases 7–10 — baseline.** Text extraction, forms, security, render/scan/OCR and CSV/XLSX
+  data. These features have not had a dedicated optimization pass yet.
+
+## Phases 0–6: optimization pass
 
 | Scenario | Before ms | After ms | Speed-up | Alloc before → after (MB) |
 |---|---:|---:|---:|---:|
@@ -19,12 +25,71 @@ hashing 7 fixed documents: graphics, report with TOC/tables/lists, and all 5 bui
 | F6 open a 2000-page file | — | 13 | | 6.6 |
 | F6 open + save a 2000-page file | — | 22 | | 15 |
 
-Ranges show run-to-run noise on the laptop. Run it yourself:
+Ranges show run-to-run noise on the laptop.
+
+## Phases 7–10 and CSV/XLSX: baseline
+
+Same machine, same method. "Out KB" is the produced PDF/PNG; "—" means the scenario returns a
+count instead. `Fixtures:` the layout report is 58 pages (126 KB), built from 400 paragraphs and
+a 1500-row table; the image PDF contains 600 images (300 PNG + 300 JPEG).
+
+| Scenario | ms | Alloc MB | Out KB |
+|---|---:|---:|---:|
+| F3 CSV parse: 5000 rows × 6 columns | 3.3 | 4.5 | — |
+| F3 table report: 5000-row CSV | 840.6 | 166.2 | 559 |
+| F3 XLSX parse: 2000 rows × 5 columns | 19.2 | 8.9 | — |
+| F7 extract text + tables (58 pages) | 174.2 | 145.0 | — |
+| F7 PDF → HTML (58 pages) | 181.5 | 146.4 | — |
+| F7 search "Rp1.924.500" (58 pages) | 164.9 | 146.4 | — |
+| F7 redact a value on every page | 196.6 | 169.9 | — |
+| F7 read the images of a 600-image PDF | 1.0 | 1.2 | — |
+| F8 fill 500 fields + flatten | 5.8 | 3.1 | 148 |
+| F8 fill 500 fields, keep editable | 7.4 | 4.2 | 245 |
+| F9 encrypt AES-128 (126 KB) | 1.6 | 2.1 | 129 |
+| F9 encrypt RC4-128 (126 KB) | 2.1 | 2.0 | 126 |
+| F9 open AES-128 file | 0.4 | 0.3 | — |
+| F9 sign + verify a one-page contract | 4.4 | 0.8 | 17 |
+| F10 render A4 @150 DPI | 55.7 | 24.7 | 312 |
+| F10 render 10 pages @100 DPI | 278.8 | 112.3 | — |
+| F10 read 20 QR codes from a page | 166.2 | 29.9 | — |
+| F10 OCR A4 text @200 DPI | 1250.3 | ~0 | — |
+| F10 make 3 pages searchable @150 DPI | 3641.3 | 73.6 | 7 |
+| F10 scan page: render + OCR @150 DPI | 1115.9 | 24.4 | — |
+
+What the numbers say:
+
+- **Tabular data is cheap; layout is not.** Parsing 5000 CSV rows takes 3.3 ms and 2000 XLSX rows
+  19 ms (zip + XML), while laying those 5000 rows out as a 559 KB report takes 0.84 s — the same
+  cost per row as any other table.
+- **Extraction is linear in pages and the biggest managed allocator**: ~2.5 MB per page
+  (58 pages → 145 MB) because each page rebuilds glyph objects and strings. HTML conversion and
+  search cost about the same as extraction, so the pipeline — not the converter — dominates.
+  Reading an image's metadata is nearly free (1 ms for 600 images); pixel data is decoded lazily.
+- **Security is negligible.** Encrypting or opening a 58-page document costs 0.4–2.1 ms, and
+  AES-128 vs RC4-128 is within noise. Signing (RSA-2048, CMS/PKCS#7, whole-file `/ByteRange`)
+  plus verification takes 4.4 ms.
+- **Forms:** creating, filling and serializing 500 fields over 13 pages costs 6–8 ms. Flattening
+  shrinks the file (245 → 148 KB) because the appearances move into the page content.
+- **Rendering is native-bound**: 56 ms per A4 page at 150 DPI (312 KB PNG), ~28 ms per page at
+  100 DPI.
+- **OCR dominates any scan pipeline**: 1.25 s for one A4 page at 200 DPI, ~1.2 s per page for
+  `MakeSearchable` at 150 DPI. `DocumentScanner.ScanPage` (render + OCR, barcode off) is 1.1 s, so
+  the render is noise next to Tesseract. The allocation column shows ~0 MB for OCR because
+  Tesseract allocates natively, outside the managed counter.
+- **Barcodes are cheap**: 20 QR codes on one rendered page in 166 ms (~8 ms per code, including
+  zxing-cpp's detection over the whole image).
+
+Run it yourself:
 
 ```bash
-dotnet run -c Release --project benchmarks/LifeOS.Pdf.Benchmarks          # all scenarios
+dotnet run -c Release --project benchmarks/LifeOS.Pdf.Benchmarks           # all scenarios
 dotnet run -c Release --project benchmarks/LifeOS.Pdf.Benchmarks -- layout # filter by name
+dotnet run -c Release --project benchmarks/LifeOS.Pdf.Benchmarks -- --quick # 1 run, smoke test
 ```
+
+Phase-10 scenarios need the native PDFium library next to the executable (`pdfium.dll` on
+Windows); the OCR ones also need Tesseract's language data, pointed to by `LIFEOS_TESSDATA`.
+Without them those scenarios print `skipped` instead of failing.
 
 ## What changed
 
@@ -46,6 +111,9 @@ dotnet run -c Release --project benchmarks/LifeOS.Pdf.Benchmarks -- layout # fil
 - **QR**: flat module arrays, cached mask patterns per version, cheaper penalty bookkeeping.
 - **Parser**: integers are read directly from bytes, names/keywords are interned per file,
   cross-reference entries are structs.
+
+Phases 7–10 and the CSV/XLSX reader have no optimization pass yet: the table above is the
+baseline to measure against when one happens.
 
 ## Speed vs. size
 
