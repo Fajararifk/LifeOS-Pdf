@@ -124,7 +124,18 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Pack (version from tag)
-        run: dotnet pack src/LifeOS.Pdf -c Release -o artifacts -p:Version=${GITHUB_REF_NAME#v}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          for project in \
+            src/LifeOS.Pdf \
+            src/LifeOS.Pdf.Signing \
+            src/LifeOS.Pdf.Rendering \
+            src/LifeOS.Pdf.Barcode.Scanning \
+            src/LifeOS.Pdf.Ocr \
+            src/LifeOS.Pdf.Scanning
+          do
+            dotnet pack "$project" -c Release -o artifacts -p:Version="$version"
+          done
 
       - uses: actions/upload-artifact@v4
         with:
