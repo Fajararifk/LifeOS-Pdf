@@ -11,9 +11,14 @@ Before v1.0, a minor version may contain breaking changes (always listed here).
 - `LifeOS.Pdf.Barcode.Scanning` (`BarcodeReader`): read QR codes and 1D barcodes from raw pixels or
   PNG using zxing-cpp (Apache-2.0, via `ZXingCpp`). Round-trips with the Fase 4 encoders; handles
   dense document QR codes (e.g. e-Faktur) that the older ZXing.Net port missed.
-- `LifeOS.Pdf.Ocr` (`OcrEngine`): OCR text (with word boxes) from images using Tesseract
-  (Apache-2.0); needs the `tessdata` language files.
-- `LifeOS.Pdf.Scanning` (`DocumentScanner`): one call renders a page and runs barcode + OCR.
+- `LifeOS.Pdf.Ocr` (`OcrEngine`): OCR text and word boxes from images and PDF pages
+  (`Recognize`/`RecognizePdf`/`RecognizeAll`); `MakeSearchable` adds an invisible text layer
+  (rendering mode 3) so scanned PDFs become selectable and searchable. Word positions are in
+  points (pixel × 72/DPI); `OcrOptions` sets the DPI and Tesseract page segmentation mode.
+  Needs the `tessdata` language files.
+- `LifeOS.Pdf.Scanning` (`DocumentScanner`): one call renders a page (or all pages) and runs
+  barcode + OCR (`ScanPage`/`ScanAll`), returning text, word boxes and barcodes.
+- `PdfGraphics.DrawInvisibleText`: text that is selectable/searchable but not painted (OCR layer).
 
 ## [1.0.0] — Phase 9: Security (encryption)
 

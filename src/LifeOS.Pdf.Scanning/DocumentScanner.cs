@@ -19,28 +19,45 @@ namespace LifeOS.Pdf.Scanning
             _ocr = new OcrEngine(tessDataPath, language);
         }
 
-        public ScannedPage ScanPage(PdfDocument document, int pageIndex, ScanOptions? options = null)
+        /// <summary>Scans one page.</summary>
+        public ScannedPage ScanPage(PdfDocument document, int pageIndex, ScanOptions? options = null) =>
+            ScanPage(document.ToArray(), pageIndex, options ?? new ScanOptions());
+
+        /// <summary>Scans every page, in order (serializes once).</summary>
+        public IReadOnlyList<ScannedPage> ScanAll(PdfDocument document, ScanOptions? options = null)
         {
             options ??= new ScanOptions();
-            var image = _renderer.Render(document.ToArray(), pageIndex, new RenderOptions { Dpi = options.Dpi });
+            var bytes = document.ToArray();
+            var results = new List<ScannedPage>(document.Pages.Count);
+            for (var i = 0; i < document.Pages.Count; i++)
+            {
+                results.Add(ScanPage(bytes, i, options));
+            }
+
+            return results;
+        }
+
+        private ScannedPage ScanPage(byte[] bytes, int pageIndex, ScanOptions options)
+        {
+            var image = _renderer.Render(bytes, pageIndex, new RenderOptions { Dpi = options.Dpi });
 
             var barcodes = new List<BarcodeReadResult>();
             if (options.Barcode)
             {
-                var result = _barcode.ReadPng(image.Png);
-                if (result != null)
-                {
-                    barcodes.Add(result);
-                }
+                barcodes.AddRange(_barcode.ReadAllPng(image.Png));
             }
 
-            var text = string.Empty;
+            OcrPageResult? ocr = null;
             if (options.Ocr && _ocr != null)
             {
-                text = _ocr.RecognizeText(image.Png);
+                ocr = _ocr.Recognize(image.Png, new OcrOptions { Dpi = options.Dpi });
             }
 
-            return new ScannedPage(pageIndex, text, barcodes);
+            return new ScannedPage(
+                pageIndex,
+                ocr?.Text ?? string.Empty,
+                ocr?.Words ?? Array.Empty<OcrWord>(),
+                barcodes);
         }
 
         public void Dispose() => _ocr?.Dispose();

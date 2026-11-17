@@ -574,17 +574,30 @@ var reader = new BarcodeReader();
 foreach (var b in reader.ReadAllPng(image.Png))
     Console.WriteLine($"[{b.Format}] {b.Text}");
 
-// 3) OCR text from a scanned image (Tesseract; point to your tessdata folder)
+// 3) OCR from an image or a PDF page (Tesseract; point to your tessdata folder).
+//    Word positions are returned in points (pixel × 72 / DPI), top-left origin.
 using var ocr = new OcrEngine("/path/to/tessdata", "eng+ind");
-OcrPageResult recognized = ocr.Recognize(image.Png);
-foreach (var word in recognized.Words)
-    Console.WriteLine($"{word.Text} at {word.X},{word.Y}");
 
-// 4) Combined render + barcode + OCR in one call
+OcrPageResult fromImage = ocr.Recognize(image.Png, new OcrOptions { Dpi = 200 });
+foreach (var word in fromImage.Words)
+    Console.WriteLine($"{word.Text} at {word.X},{word.Y} ({word.Width}×{word.Height})");
+
+OcrPageResult fromPage = ocr.RecognizePdf(doc, 0, new OcrOptions { Dpi = 200 });
+IReadOnlyList<OcrPageResult> everyPage = ocr.RecognizeAll(doc, new OcrOptions { Dpi = 200 });
+
+// 4) Make a scanned PDF searchable: adds an invisible text layer (rendering mode 3)
+//    so the content can be selected and searched without changing how it looks.
+var scannedPdf = PdfDocument.Open("scanned-invoice.pdf");
+ocr.MakeSearchable(scannedPdf, new OcrOptions { Dpi = 200 });
+scannedPdf.Save("scanned-invoice-searchable.pdf");
+
+// 5) Combined render + barcode + OCR in one call (single page or all pages)
 using var scanner = new DocumentScanner("/path/to/tessdata", "eng");
-var scanned = scanner.ScanPage(doc, 0, new ScanOptions { Dpi = 200, Barcode = true, Ocr = true });
-Console.WriteLine(scanned.Text);
-foreach (var b in scanned.Barcodes) Console.WriteLine($"[{b.Format}] {b.Text}");
+var page = scanner.ScanPage(doc, 0, new ScanOptions { Dpi = 200, Barcode = true, Ocr = true });
+Console.WriteLine(page.Text);
+foreach (var b in page.Barcodes) Console.WriteLine($"[{b.Format}] {b.Text}");
+
+IReadOnlyList<ScannedPage> pages = scanner.ScanAll(doc, new ScanOptions { Dpi = 200 });
 ```
 
 Native setup:

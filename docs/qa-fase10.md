@@ -8,6 +8,11 @@
 > (zxing-cpp, native). Alasannya: ZXing.Net gagal membaca QR padat pada dokumen nyata (faktur pajak
 > e-Faktur) di 150–400 DPI + TryHarder, sedangkan zxing-cpp berhasil. Setelah upgrade, 2 QR faktur
 > terbaca (`QrCode`), round-trip QR/Code128 tetap hijau, 535/535 test pass.
+>
+> **Addendum (17 Nov):** OCR dilengkapi: `OcrWord` sekarang dalam **point** (pixel × 72/DPI),
+> `RecognizePdf`, `RecognizeAll`, **`MakeSearchable`** (lapisan teks tak terlihat, render mode `3 Tr`,
+> ditambahkan `PdfGraphics.DrawInvisibleText` di core), `OcrOptions` (DPI + page segmentation mode),
+> dan `DocumentScanner.ScanAll`. Test `OcrTests` diperluas (koordinat point, searchable, semua halaman).
 
 ## Verdict: ✅ PASS (dengan catatan)
 

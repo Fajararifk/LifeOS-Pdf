@@ -268,6 +268,23 @@ namespace LifeOS.Pdf.Drawing
         }
 
         /// <summary>
+        /// Draws a line of text that can be selected and searched but is not visible (text
+        /// rendering mode 3, ISO 32000-1 §9.3.6), e.g. the OCR text layer over a scanned page.
+        /// </summary>
+        public void DrawInvisibleText(string text, PdfFont font, double x, double y, TextAlign align = TextAlign.Left)
+        {
+            if (text == null)
+            {
+                throw new ArgumentNullException(nameof(text));
+            }
+
+            RequireFont(font);
+            RequireFinite(x, y);
+            var line = text.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
+            WriteTextLine(line, font, x, y, PdfColor.Black, align, invisible: true);
+        }
+
+        /// <summary>
         /// Draws text wrapped to <paramref name="width"/>. Lines break at spaces; words longer
         /// than the box are split. '\n' starts a new paragraph. Returns the height used, in points.
         /// </summary>
@@ -714,7 +731,7 @@ namespace LifeOS.Pdf.Drawing
             return lines;
         }
 
-        private void WriteTextLine(string line, PdfFont font, double x, double top, PdfColor color, TextAlign align)
+        private void WriteTextLine(string line, PdfFont font, double x, double top, PdfColor color, TextAlign align, bool invisible = false)
         {
             var run = font.Map(line);
             var bytes = run.Codes;
@@ -731,6 +748,11 @@ namespace LifeOS.Pdf.Drawing
             Begin();
             SetColor(color, "rg");
             Operator("BT");
+            if (invisible)
+            {
+                Operator("3 Tr"); // invisible text: selectable/searchable, not painted
+            }
+
             _ops.Append('/').Append(name).Append(' ');
             W(font.Size).Operator("Tf");
             W("1 0 0 1").W(left).W(baseline).Operator("Tm");
