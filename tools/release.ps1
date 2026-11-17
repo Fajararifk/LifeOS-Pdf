@@ -102,7 +102,7 @@ try {
     Write-Host ''
     Write-Host "Publishing to $Source"
     foreach ($package in $packages) {
-        dotnet nuget push $package.FullName --api-key $key --source $Source --skip-duplicate --nologo
+        dotnet nuget push $package.FullName --api-key $key --source $Source --skip-duplicate
         if ($LASTEXITCODE -ne 0) {
             throw "dotnet nuget push failed for $($package.Name)"
         }
