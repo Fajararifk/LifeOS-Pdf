@@ -53,6 +53,54 @@ Or take everything at once (.NET 8+, pulls the core and the five companions):
 dotnet add package LifeOS.Pdf.All
 ```
 
+### Run the examples
+
+Two ways to try the code in this tutorial.
+
+**From the repository** — everything is already wired, no package reference needed:
+
+```bash
+git clone https://github.com/Fajararifk/LifeOS-Pdf.git
+cd LifeOS-Pdf
+dotnet run -c Release --project samples/LifeOS.Pdf.Samples -f net8.0 -- out
+```
+
+`out/` then contains `showcase.pdf`, `report.pdf`, every `template-*.pdf` (including
+`template-table-report.pdf` from the CSV sample), `barcodes.pdf`, `navigation.pdf`,
+`merged.pdf`, `form.pdf` and the extracted files.
+
+**In a project of your own** — replace the contents of `Program.cs` with a snippet (the examples
+use top-level statements and work as-is, together with their `using` lines), then:
+
+```bash
+dotnet run
+```
+
+A first complete program, using the CSV report from section 5:
+
+```csharp
+using LifeOS.Pdf.Templates;
+
+var data = TabularData.FromCsvFile("penjualan.csv");
+data.Title = "Rekap Penjualan";
+data.Subtitle = "November 2026";
+BuiltInTemplates.TableReport.Render(data).Save("rekap.pdf");
+```
+
+`penjualan.csv` is a plain CSV with a header row, for example:
+
+```csv
+Tanggal;No. Faktur;Pelanggan;Kategori;Jumlah
+2026-11-02;INV-2026-001;PT Sinar Jaya;Jasa;1250000
+2026-11-05;INV-2026-002;CV Mitra Abadi;Barang;875000
+```
+
+`rekap.pdf` lands next to the executable's working directory; open it in any PDF viewer.
+
+Native pieces (section 12): rendering needs `pdfium.dll` next to the executable and OCR
+needs a `tessdata` folder with `eng.traineddata`. Everything else — layout, templates, CSV/XLSX,
+extraction, forms, encryption — runs with the core package alone.
+
 ---
 
 ## 2. Your first PDF (Phase 0)
