@@ -3,6 +3,39 @@
 Format: [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 Before v1.0, a minor version may contain breaking changes (always listed here).
 
+## [1.2.0] — Phase 11a: HTML → PDF (Chromium)
+
+### Added
+- `LifeOS.Pdf.Html` (.NET 8+): HTML/CSS → PDF with an installed Chrome, Edge or Chromium running
+  headless, through PuppeteerSharp (MIT). No browser is downloaded or bundled; it is found through
+  `ChromiumOptions.ExecutablePath`, the `LIFEOS_PDF_CHROMIUM` environment variable or the standard
+  install folders.
+- `IHtmlToPdfConverter` (`ConvertHtml`/`ConvertFile`/`ConvertUrl`, sync and async with cancellation) and
+  its Chromium implementation `ChromiumConverter`: one reusable browser process, a fresh isolated browser
+  context per conversion, `MaxConcurrency` tabs at once, spare tabs prepared ahead of time, automatic
+  browser restart after a crash or a hung page.
+- `HtmlToPdf` facade (`Convert`, `ConvertAsync`, `ConvertFile`, `ConvertUrl`, `ToDocument`) with a shared
+  converter.
+- `HtmlToPdfOptions`: paper (`PageSize`, `Landscape`, `PreferCssPageSize`), `HtmlMargins` in points,
+  `Scale`, `PrintBackground`, `PageRanges`; HTML header/footer with `{page}`, `{pages}`, `{date}`,
+  `{title}`, `{url}`; `BaseUrl`, `WaitUntil`, `WaitForSelector`, `ExtraDelay`, `Timeout`,
+  `EmulateScreenMedia`; metadata (`Title`, `Author`, `Subject`, `CreationDate`).
+- Safe defaults for untrusted HTML: network and `file://` requests blocked (`AllowNetwork`,
+  `AllowLocalFiles` confined to the `BaseUrl` folder), `AllowJavaScript` switch, `MaxHtmlLength`,
+  `MaxOutputBytes`, hard timeout.
+- Post-processing (default on): the browser's PDF is re-saved with the LifeOS.Pdf writer, so `/ID` is
+  derived from the content and the same input + `CreationDate` gives the same bytes (same browser version).
+- `HtmlConversionException` with `HtmlConversionError` (`BrowserNotFound`, `LaunchFailed`, `Timeout`,
+  `NavigationFailed`, `InputTooLarge`, `OutputTooLarge`, `BrowserCrashed`).
+- `LifeOS.Pdf.All` now includes `LifeOS.Pdf.Html`.
+- Benchmarks `F11 …` and a Phase 11 section in `docs/performance.md`; tutorial chapter 13
+  "HTML → PDF"; sample `HtmlSample` (`html-invoice.pdf`, `html-report.pdf`).
+
+### Notes
+- No change to the core package. The wkhtmltopdf backend follows in Phase 11b; SVG → PDF vector import
+  is a separate phase.
+- Output is not tagged (PDF/UA is Phase 14). Header/footer page numbers count the HTML pages only.
+
 ## [1.1.0] — Phase 10: Render, Scan & OCR
 
 ### Added

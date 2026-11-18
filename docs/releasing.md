@@ -1,10 +1,10 @@
 # Releasing
 
-Seven packages are published from one version:
+Eight packages are published from one version:
 
 `LifeOS.Pdf`, `LifeOS.Pdf.Signing`, `LifeOS.Pdf.Rendering`,
-`LifeOS.Pdf.Barcode.Scanning`, `LifeOS.Pdf.Ocr`, `LifeOS.Pdf.Scanning`, and the
-`LifeOS.Pdf.All` meta-package (dependencies only, no code: the six above in one install).
+`LifeOS.Pdf.Barcode.Scanning`, `LifeOS.Pdf.Ocr`, `LifeOS.Pdf.Scanning`, `LifeOS.Pdf.Html`, and the
+`LifeOS.Pdf.All` meta-package (dependencies only, no code: the seven above in one install).
 
 The version lives in `VersionPrefix` (`Directory.Build.props`) and must match the tag and the
 top entry of `CHANGELOG.md`.

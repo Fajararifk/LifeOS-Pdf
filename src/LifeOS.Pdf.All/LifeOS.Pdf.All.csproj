@@ -5,7 +5,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <RootNamespace>LifeOS.Pdf.All</RootNamespace>
     <PackageId>LifeOS.Pdf.All</PackageId>
-    <Description>Everything in one command: LifeOS.Pdf plus signing, rendering, barcode scanning, OCR and the combined scanner (.NET 8+).</Description>
+    <Description>Everything in one command: LifeOS.Pdf plus signing, rendering, barcode scanning, OCR, the combined scanner and HTML → PDF (.NET 8+).</Description>
     <!-- A meta-package: it contains no code, only dependencies on the other packages. -->
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
@@ -22,6 +22,7 @@
     <ProjectReference Include="..\LifeOS.Pdf.Barcode.Scanning\LifeOS.Pdf.Barcode.Scanning.csproj" />
     <ProjectReference Include="..\LifeOS.Pdf.Ocr\LifeOS.Pdf.Ocr.csproj" />
     <ProjectReference Include="..\LifeOS.Pdf.Scanning\LifeOS.Pdf.Scanning.csproj" />
+    <ProjectReference Include="..\LifeOS.Pdf.Html\LifeOS.Pdf.Html.csproj" />
   </ItemGroup>
 
   <ItemGroup>

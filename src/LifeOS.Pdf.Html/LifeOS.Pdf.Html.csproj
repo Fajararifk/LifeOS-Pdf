@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- PuppeteerSharp and async disposal need .NET 8+ (see docs/design-fase11.md §4). -->
+    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(LifeOsSdkHasNet10)' == 'true'">$(TargetFrameworks);net10.0</TargetFrameworks>
+    <RootNamespace>LifeOS.Pdf.Html</RootNamespace>
+    <PackageId>LifeOS.Pdf.Html</PackageId>
+    <Description>HTML/CSS to PDF for LifeOS.Pdf using an installed Chrome, Edge or Chromium (headless, via PuppeteerSharp).</Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LifeOS.Pdf\LifeOS.Pdf.csproj" />
+    <PackageReference Include="PuppeteerSharp" Version="25.17.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="LifeOS.Pdf.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\THIRD_PARTY_NOTICES.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

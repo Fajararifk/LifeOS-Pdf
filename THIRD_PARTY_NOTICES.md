@@ -11,9 +11,14 @@ dependencies.
 | `LifeOS.Pdf.Rendering` | `PDFiumCore` (PDFium) | Apache-2.0 / BSD-3-Clause |
 | `LifeOS.Pdf.Barcode.Scanning` | `ZXingCpp` (zxing-cpp) | Apache-2.0 |
 | `LifeOS.Pdf.Ocr` | `Tesseract` | Apache-2.0 |
+| `LifeOS.Pdf.Html` | `PuppeteerSharp` (and its Microsoft.Extensions.Logging / System.Text.Json dependencies) | MIT |
 
 The native libraries used by these packages (PDFium and Tesseract binaries, and the Tesseract
 language data) are not bundled in this repository; see each package's README for setup.
+
+`LifeOS.Pdf.Html` drives a Chrome, Edge or Chromium browser that is already installed on the machine
+(Chromium is BSD-3-Clause; Chrome and Edge are under their vendors' terms). No browser is downloaded,
+bundled or redistributed.
 
 ## Adobe Core 14 font metrics
 

@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-Packs (and optionally publishes) the six LifeOS.Pdf packages without GitHub Actions.
+Packs (and optionally publishes) the eight LifeOS.Pdf packages without GitHub Actions.
 
 .DESCRIPTION
 The version comes from -Version or, when omitted, from VersionPrefix in Directory.Build.props.
@@ -40,6 +40,7 @@ try {
         'src/LifeOS.Pdf.Barcode.Scanning',
         'src/LifeOS.Pdf.Ocr',
         'src/LifeOS.Pdf.Scanning',
+        'src/LifeOS.Pdf.Html',
         'src/LifeOS.Pdf.All'
     )
 

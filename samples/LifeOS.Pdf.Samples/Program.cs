@@ -79,6 +79,11 @@ namespace LifeOS.Pdf.Samples
             // Interactive forms: create, fill and flatten (Fase 8).
             FormSample.Run(outputDir);
 
+#if NET8_0_OR_GREATER
+            // HTML → PDF with an installed Chrome/Edge/Chromium (Fase 11).
+            HtmlSample.Run(Path.Combine(AppContext.BaseDirectory, "Assets"), outputDir);
+#endif
+
             // Encryption (Fase 9): password-protected output.
             var protectedDoc = new PdfDocument();
             var pp = protectedDoc.AddPage();

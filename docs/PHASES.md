@@ -53,7 +53,7 @@ nol tidak realistis (browser engine, OCR).
 
 | # | Use case | Fase | Cara |
 |---|---|---|---|
-| 1 | PDF dari HTML (WkHtmlToPdf) | 11 | Integrasi: `LifeOS.Pdf.Html`, backend wkhtmltopdf **dan** Chromium |
+| 1 | PDF dari HTML (WkHtmlToPdf) | 11a ✅ (Chromium), 11b (wkhtmltopdf) | Integrasi: `LifeOS.Pdf.Html`, backend wkhtmltopdf **dan** Chromium |
 | 2 | PDF dari kode C# (layout, tabel, gambar, header/footer) | 0 ✅ + 1 ✅ + 2 ✅ | Dari nol |
 | 3 | Membuat PDF + manipulasi dasar | 0 ✅ + 6 | Dari nol |
 | 4 | Buat, ekstrak teks, merge, split, isi form, enkripsi | 6, 7, 8, 9 | Dari nol |
@@ -85,7 +85,7 @@ parser (merge, ekstrak, form) menyusul, lalu integrasi engine eksternal di akhir
 | Form (AcroForm) | sebagian | ✓ | Fase 8 |
 | Enkripsi & tanda tangan digital | sebagian | ✓ | Fase 9 |
 | Render, scan QR/barcode, OCR | – | ✓ | Fase 10 (dari nol) |
-| HTML → PDF | – | ✓ | Fase 11 (integrasi) |
+| HTML → PDF | – | ✓ | Fase 11a ✅ (Chromium) |
 | Office (Excel/Word/PowerPoint) → PDF | – | ✓ | Fase 12 |
 | Grafik, Markdown → PDF, PDF → Excel | – | sebagian | Fase 13 |
 | PDF/A, PDF/UA, layer, gradien | sebagian | sebagian | Fase 14 |
@@ -202,6 +202,8 @@ SPESIFIKASI:
 - Pipeline gabungan: satu panggilan untuk barcode + OCR per halaman.
 
 ## FASE 11 — HTML → PDF (v1.2)  · use case 1
+11a selesai (Chromium via PuppeteerSharp, benchmark, tutorial bab 13). wkhtmltopdf → 11b; SVG → PDF
+vektor → fase terpisah. Lihat design-fase11.md & qa-fase11.md.
 SPESIFIKASI:
 - `LifeOS.Pdf.Html` dengan dua backend di balik satu interface:
   - **wkhtmltopdf** (LGPL-3.0, dipanggil sebagai proses terpisah; binary
@@ -279,7 +281,7 @@ boleh disalin (CLAUDE.md #6).
 | PDF → gambar | ⏳ dari nol | 10 |
 | Baca QR/barcode dari gambar & PDF | ⏳ dari nol | 10 |
 | OCR | ⏳ dari nol (klasik, lalu model LifeOS) | 10 |
-| HTML/CSS → PDF, CSS paged media | ⏳ | 11 |
+| HTML/CSS → PDF, CSS paged media | ✅ via Chromium (11a); wkhtmltopdf ⏳ 11b | 11 |
 | SVG → PDF (vektor) | ⏳ | 11 |
 | Office → PDF | ⏳ | 12 |
 | Ekstraksi data berbasis template zona | ⏳ | 13 |

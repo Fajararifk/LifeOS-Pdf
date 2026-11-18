@@ -1,7 +1,7 @@
 # LifeOS.Pdf — Step-by-step Tutorial
 
 A hands-on guide to **every feature** in LifeOS.Pdf, from your first PDF to forms,
-encryption, digital signatures and scanned documents. Each section is a small,
+encryption, digital signatures, scanned documents and HTML → PDF. Each section is a small,
 runnable example you can paste into a console app.
 
 > **Coordinate system:** the public API uses **top-left coordinates in points**
@@ -22,9 +22,10 @@ runnable example you can paste into a console app.
 10. [Forms (Phase 8)](#10-forms-phase-8)
 11. [Encryption & signatures (Phase 9)](#11-encryption--signatures-phase-9)
 12. [Render, scan & OCR (Phase 10)](#12-render-scan--ocr-phase-10)
-13. [End-to-end example](#13-end-to-end-example)
-14. [Error handling](#14-error-handling)
-15. [FAQ & troubleshooting](#15-faq--troubleshooting)
+13. [HTML → PDF (Phase 11)](#13-html--pdf-phase-11)
+14. [End-to-end example](#14-end-to-end-example)
+15. [Error handling](#15-error-handling)
+16. [FAQ & troubleshooting](#16-faq--troubleshooting)
 
 ---
 
@@ -45,9 +46,10 @@ dotnet add package LifeOS.Pdf.Rendering        # PDF → PNG (native PDFium)
 dotnet add package LifeOS.Pdf.Barcode.Scanning # read QR/barcodes (native zxing-cpp)
 dotnet add package LifeOS.Pdf.Ocr              # OCR (native Tesseract + tessdata)
 dotnet add package LifeOS.Pdf.Scanning         # combined render + barcode + OCR
+dotnet add package LifeOS.Pdf.Html             # HTML/CSS → PDF via installed Chrome/Edge (.NET 8+)
 ```
 
-Or take everything at once (.NET 8+, pulls the core and the five companions):
+Or take everything at once (.NET 8+, pulls the core and all six companions):
 
 ```bash
 dotnet add package LifeOS.Pdf.All
@@ -67,7 +69,8 @@ dotnet run -c Release --project samples/LifeOS.Pdf.Samples -f net8.0 -- out
 
 `out/` then contains `showcase.pdf`, `report.pdf`, every `template-*.pdf` (including
 `template-table-report.pdf` from the CSV sample), `barcodes.pdf`, `navigation.pdf`,
-`merged.pdf`, `form.pdf` and the extracted files.
+`merged.pdf`, `form.pdf`, `html-invoice.pdf`, `html-report.pdf` (when Chrome, Edge or Chromium is
+installed) and the extracted files.
 
 **In a project of your own** — replace the contents of `Program.cs` with a snippet (the examples
 use top-level statements and work as-is, together with their `using` lines), then:
@@ -771,7 +774,263 @@ does not change how the page looks — the original image stays untouched.
 
 ---
 
-## 13. End-to-end example
+## 13. HTML → PDF (Phase 11)
+
+`LifeOS.Pdf.Html` turns HTML and CSS into PDF with a **Chrome, Edge or Chromium that is already
+installed** on the machine, running headless. Use it when the layout already exists as HTML (an
+email template, a web page, a design from a front-end team). For reports built in code, the
+layout engine (section 4) is faster and needs no browser.
+
+```bash
+dotnet add package LifeOS.Pdf.Html   # .NET 8+
+```
+
+### Setup: the browser
+
+Nothing is downloaded or bundled. The converter looks for a browser in this order:
+
+1. `ChromiumOptions.ExecutablePath`, if you set it;
+2. the `LIFEOS_PDF_CHROMIUM` environment variable;
+3. the usual install folders: Chrome, then Edge, then Chromium
+   (Windows: `Program Files`/`LocalAppData`; Linux: `google-chrome`, `chromium`, `microsoft-edge`
+   on `PATH`, `/usr/bin`, `/snap/bin`; macOS: `/Applications/…`).
+
+Windows 10/11 already have Edge, so it usually just works. On a Linux server:
+
+```bash
+sudo apt install chromium           # or google-chrome-stable
+```
+
+In a container that runs as root, Chromium refuses to start without `--no-sandbox`:
+
+```csharp
+var options = new ChromiumOptions();
+options.ExtraArguments.Add("--no-sandbox");
+await using var html = new ChromiumConverter(options);
+```
+
+If no browser is found, `HtmlConversionException` (`Error = BrowserNotFound`) lists every path it tried.
+
+### Your first conversion
+
+```csharp
+using LifeOS.Pdf.Html;
+
+// One line, with a shared converter that starts the browser on first use.
+byte[] pdf = HtmlToPdf.Convert("<h1>Halo!</h1><p>Total: <b>Rp1.350.000</b></p>");
+File.WriteAllBytes("halo.pdf", pdf);
+```
+
+`HtmlToPdf` is the simplest way to start. In an application, create **one** `ChromiumConverter` and
+reuse it: launching the browser costs ~1.5 s, a conversion afterwards ~150–200 ms.
+
+```csharp
+await using var html = new ChromiumConverter();
+await html.WarmUpAsync();                 // optional: start the browser now (e.g. at server start-up)
+
+byte[] a = await html.ConvertHtmlAsync("<h1>Dokumen A</h1>");
+byte[] b = await html.ConvertHtmlAsync("<h1>Dokumen B</h1>");
+```
+
+The converter is thread-safe. Each conversion runs in its own isolated browser context (no shared
+cookies, storage or scripts), and at most `MaxConcurrency` (default 4) run at the same time.
+
+### Paper, margins, header & footer
+
+All sizes are in **points**, the same as everywhere else in LifeOS.Pdf (72 pt = 1 inch).
+
+```csharp
+var options = new HtmlToPdfOptions
+{
+    PageSize = PageSize.A4,                       // or Letter, Legal, A3, A5, new PageSize(w, h)
+    Landscape = false,
+    Margins = new HtmlMargins(top: 54, right: 40, bottom: 54, left: 40),
+    Scale = 1.0,                                  // 0.1–2.0
+    PrintBackground = true,                       // keep background colors (default true)
+    PageRanges = PageRange.Parse("1-3"),          // only these pages
+
+    HeaderHtml = "<div style='width:100%;text-align:right'>{title}</div>",
+    FooterHtml = "<div style='width:100%;text-align:center'>Halaman {page} dari {pages}</div>",
+};
+byte[] pdf = await html.ConvertHtmlAsync(myHtml, options);
+```
+
+Header and footer placeholders: `{page}`, `{pages}`, `{date}`, `{title}`, `{url}` — the same names
+as `PdfStamper.AddPageNumbers`. They are drawn inside the top and bottom margins, so leave enough room
+(~40 pt). The page's CSS does **not** apply to them: style them inline. The default size is 9 pt.
+
+Prefer the page's own CSS for paper size with `PreferCssPageSize = true`:
+
+```css
+@page { size: A5 landscape; }
+```
+
+### Files, images, CSS and `BaseUrl`
+
+`data:` URIs always work, so the simplest self-contained template embeds its images:
+
+```csharp
+var logo = Convert.ToBase64String(File.ReadAllBytes("logo.png"));
+var page = $"<img src='data:image/png;base64,{logo}' style='height:48px'><h1>INVOICE</h1>";
+```
+
+To convert a file **with its stylesheet and images next to it**, use `ConvertFileAsync`. Files in the
+same folder (and below it) may be read, nothing else:
+
+```csharp
+// invoice.html links invoice.css and img/logo.png in the same folder.
+byte[] pdf = await html.ConvertFileAsync("templates/invoice.html");
+```
+
+For an HTML **string** whose relative links point to a folder, set `BaseUrl` and opt in:
+
+```csharp
+var options = new HtmlToPdfOptions
+{
+    BaseUrl = new Uri(Path.GetFullPath("templates") + Path.DirectorySeparatorChar),
+    AllowLocalFiles = true,                       // only files under BaseUrl
+};
+byte[] pdf = await html.ConvertHtmlAsync(renderedTemplate, options);
+```
+
+The sample app does exactly this with `samples/LifeOS.Pdf.Samples/Assets/html/invoice.html` →
+`out/html-invoice.pdf`.
+
+### Waiting for the page
+
+By default the PDF is printed after the `load` event (HTML, CSS, images and fonts loaded). For pages
+that build themselves with JavaScript (charts, fetched data):
+
+```csharp
+var options = new HtmlToPdfOptions
+{
+    WaitUntil = HtmlWaitUntil.NetworkIdle,        // no request for 500 ms
+    WaitForSelector = "#chart-ready",             // an element your script adds when done
+    ExtraDelay = TimeSpan.FromMilliseconds(200),  // e.g. for a CSS animation
+    Timeout = TimeSpan.FromSeconds(30),           // upper limit for the whole conversion
+};
+```
+
+A page that never finishes (an endless script) is stopped after `Timeout` with
+`HtmlConversionException` (`Error = Timeout`); the converter stays usable and restarts the browser
+by itself if it has to. A `CancellationToken` cancels a conversion at any time.
+
+### Untrusted HTML
+
+HTML from users can try to read local files or call into your network. The defaults are safe:
+
+| Option | Default | Effect |
+|---|---|---|
+| `AllowNetwork` | `false` | http/https/WebSocket requests are blocked (no SSRF, no tracking pixels) |
+| `AllowLocalFiles` | `false` | `file://` requests are blocked; when on, only inside the `BaseUrl` folder |
+| `AllowJavaScript` | `true` | set to `false` for HTML you do not trust |
+| `MaxHtmlLength` | 20 M chars | longer input is rejected before the browser sees it |
+| `MaxOutputBytes` | 256 MB | larger PDFs are rejected |
+
+```csharp
+var untrusted = new HtmlToPdfOptions
+{
+    AllowJavaScript = false,
+    Timeout = TimeSpan.FromSeconds(10),
+};
+byte[] pdf = await html.ConvertHtmlAsync(userHtml, untrusted);
+```
+
+Blocked images still leave room on the page (Chromium draws its "broken image" icon). Converting a web
+page with `ConvertUrlAsync` requires `AllowNetwork = true` explicitly — only do that for sites you trust.
+
+### Combine with the rest of LifeOS.Pdf
+
+The result is an ordinary PDF, so everything from earlier sections works on it:
+
+```csharp
+using LifeOS.Pdf;
+using LifeOS.Pdf.Fonts;
+using LifeOS.Pdf.Html;
+using LifeOS.Pdf.Manipulation;
+
+// A cover page made with LifeOS.Pdf + the body from HTML, watermarked and encrypted.
+var doc = new PdfDocument();
+var cover = doc.AddPage(PageSize.A4);
+cover.Graphics.DrawText("Laporan Penjualan 2026", new PdfFont(StandardFont.HelveticaBold, 28), 56, 120);
+
+PdfMerger.Append(doc, HtmlToPdf.ToDocument(reportHtml), "Isi laporan");
+PdfStamper.AddTextWatermark(doc, "DRAFT");
+doc.Save("laporan.pdf", new PdfSaveOptions
+{
+    Encryption = new PdfEncryptionOptions { UserPassword = "rahasia" },
+});
+```
+
+Header/footer page numbers count the HTML pages only. When you merge, number the final document with
+`PdfStamper.AddPageNumbers` instead.
+
+### Metadata and reproducible output
+
+By default (`PostProcess = true`) the browser's PDF is re-saved with the LifeOS.Pdf writer: the title
+comes from `<title>` (or `Title`), `Author`/`Subject` are applied, and the file ID is derived from the
+content. Fix the date and the same HTML gives the same bytes:
+
+```csharp
+var options = new HtmlToPdfOptions
+{
+    Title = "Invoice INV-2026-0042",
+    Author = "CV Contoh Kreatif",
+    CreationDate = new DateTimeOffset(2026, 11, 18, 0, 0, 0, TimeSpan.FromHours(7)),
+};
+```
+
+This holds for the same browser version; a browser update may change the bytes. Re-saving costs ~1 ms.
+
+### Performance tips
+
+Measured numbers are in [performance.md](performance.md#phase-11-html--pdf-chromium--baseline).
+
+- Reuse one converter; never create one per request.
+- Call `WarmUpAsync()` at start-up so the first user does not wait ~1.5 s.
+- Requests with a pause between them take ~130–160 ms: the converter prepares the next isolated tab in
+  the background. Back-to-back requests take ~190 ms.
+- `MaxConcurrency` above 4 rarely helps; for high volume run several converters (each has its own browser).
+- Inline small images as `data:` URIs: no file access to configure, nothing to wait for.
+
+### End-to-end: an HTML invoice with page numbers
+
+```csharp
+using LifeOS.Pdf;
+using LifeOS.Pdf.Html;
+
+await using var html = new ChromiumConverter();
+
+var options = new HtmlToPdfOptions
+{
+    Margins = new HtmlMargins(36, 40, 54, 40),
+    FooterHtml = "<div style='width:100%;text-align:center;color:#6B7280'>Halaman {page} dari {pages}</div>",
+    Author = "CV Contoh Kreatif",
+};
+
+try
+{
+    byte[] pdf = await html.ConvertFileAsync("invoice.html", options);
+    File.WriteAllBytes("invoice.pdf", pdf);
+
+    // Check the result like any other PDF.
+    var doc = PdfDocument.Open(pdf);
+    Console.WriteLine($"{doc.Pages.Count} page(s), title: {doc.Info.Title}");
+}
+catch (HtmlConversionException ex) when (ex.Error == HtmlConversionError.BrowserNotFound)
+{
+    Console.WriteLine("Install Chrome/Edge/Chromium or set LIFEOS_PDF_CHROMIUM.");
+}
+```
+
+Limits worth knowing: what you get is what Chromium prints, so CSS support is that of the installed
+browser (flexbox, grid and web fonts work); fonts that are not installed must come in through
+`@font-face` with a `data:` URI or a local file under `BaseUrl`; the PDF is not tagged (PDF/UA is
+Phase 14); and wkhtmltopdf as a second backend follows in Phase 11b.
+
+---
+
+## 14. End-to-end example
 
 A complete invoice from scratch: header, table, totals, a QR code and a signature area.
 
@@ -819,7 +1078,7 @@ invoice.Save("invoice.pdf");
 
 ---
 
-## 14. Error handling
+## 15. Error handling
 
 The library never writes a broken PDF silently — it throws with an actionable message:
 
@@ -830,6 +1089,7 @@ The library never writes a broken PDF silently — it throws with an actionable 
 | `PdfLimitException` | an `PdfReadOptions` limit was exceeded (untrusted input) |
 | `LayoutException` | content does not fit (e.g. a table wider than the page) |
 | `TemplateException` | template error, with line and column |
+| `HtmlConversionException` | HTML → PDF failed; `Error` says why (`BrowserNotFound`, `Timeout`, `NavigationFailed`, …) |
 | `ArgumentException` / `ArgumentOutOfRangeException` | invalid public API input |
 
 ```csharp
@@ -849,7 +1109,7 @@ catch (PdfLimitException ex)
 
 ---
 
-## 15. FAQ & troubleshooting
+## 16. FAQ & troubleshooting
 
 **The output looks wrong in one viewer but fine in another.**
 Open it in two viewers (e.g. Chrome and Acrobat). The test suite validates with qpdf,
@@ -875,6 +1135,19 @@ derived from the content.
 Use `BarcodeReader.ReadAllPng` (zxing-cpp with `TryHarder`); if a page has several
 codes, it returns all of them. For OCR of scanned pages, raise the render DPI
 (e.g. 200–300) before `OcrEngine.Recognize`.
+
+**HTML → PDF: "No Chrome, Edge or Chromium was found".**
+Install one, or point `LIFEOS_PDF_CHROMIUM` / `ChromiumOptions.ExecutablePath` to the executable. In a
+Docker container running as root also add `--no-sandbox` to `ChromiumOptions.ExtraArguments`.
+
+**HTML → PDF: images or CSS are missing.**
+External requests are blocked by default. Inline images as `data:` URIs, use `ConvertFileAsync` for a
+file with its assets next to it, or set `BaseUrl` + `AllowLocalFiles` (or `AllowNetwork` for trusted
+web content). The exception message of a failed load lists the blocked URLs.
+
+**HTML → PDF: the header or footer is tiny or missing.**
+Give the margins room (top/bottom ~40 pt or more) and style the header inline; the page's CSS does not
+reach it.
 
 **How do I upgrade from another library?**
 The API is coordinate-based (top-left, points) and fluent; see the [migration notes]

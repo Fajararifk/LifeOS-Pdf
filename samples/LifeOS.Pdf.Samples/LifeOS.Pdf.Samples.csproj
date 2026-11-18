@@ -12,6 +12,11 @@
     <ProjectReference Include="..\..\src\LifeOS.Pdf\LifeOS.Pdf.csproj" />
   </ItemGroup>
 
+  <!-- HTML → PDF (Fase 11) needs .NET 8+; older runtimes build the rest of the showcase without it. -->
+  <ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">
+    <ProjectReference Include="..\..\src\LifeOS.Pdf.Html\LifeOS.Pdf.Html.csproj" />
+  </ItemGroup>
+
   <ItemGroup>
     <None Include="Assets\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

@@ -15,6 +15,7 @@
     <ProjectReference Include="..\..\src\LifeOS.Pdf.Barcode.Scanning\LifeOS.Pdf.Barcode.Scanning.csproj" />
     <ProjectReference Include="..\..\src\LifeOS.Pdf.Ocr\LifeOS.Pdf.Ocr.csproj" />
     <ProjectReference Include="..\..\src\LifeOS.Pdf.Scanning\LifeOS.Pdf.Scanning.csproj" />
+    <ProjectReference Include="..\..\src\LifeOS.Pdf.Html\LifeOS.Pdf.Html.csproj" />
   </ItemGroup>
 
   <ItemGroup>

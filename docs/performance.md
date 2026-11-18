@@ -8,6 +8,7 @@ Measured with `benchmarks/LifeOS.Pdf.Benchmarks` (Release, .NET 8.0.34, Windows 
   hashing 7 fixed documents: graphics, report with TOC/tables/lists, and all 5 built-in templates).
 - **Phases 7–10 — baseline.** Text extraction, forms, security, render/scan/OCR and CSV/XLSX
   data. These features have not had a dedicated optimization pass yet.
+- **Phase 11 — baseline.** HTML → PDF through a headless Chromium browser.
 
 ## Phases 0–6: optimization pass
 
@@ -124,3 +125,50 @@ files typically 10–30% larger. The default stays `Optimal`.
 
 Performance work must not change output bytes. Re-run the benchmark and compare document hashes
 against the previous release before merging.
+
+## Phase 11: HTML → PDF (Chromium) — baseline
+
+Same method (best of 7 after warm-up), measured on a Windows 11 machine with .NET 8.0.27 and
+**Microsoft Edge 157** (headless, Chromium) through `LifeOS.Pdf.Html`. The F2 row was re-run on the
+same machine so the two are directly comparable.
+"Warm" means the converter is created once and reused; every conversion still gets its own fresh,
+isolated browser context. The managed allocation column is not meaningful here: the work happens in
+the browser's own processes and on async threads the counter does not see, so it is omitted.
+
+| Scenario | ms | Out KB |
+|---|---:|---:|
+| Cold start: launch browser + first page | 1593 | 32 |
+| HTML 1 page (warm) | 187 | 32 |
+| HTML 1 page, `PostProcess = false` | 184 | 33 |
+| Invoice: CSS + `data:` image + footer page numbers | 207 | 57 |
+| Report: 1500-row table | 419 | 142 |
+| 20 invoices, `MaxConcurrency = 1` | 4407 (220 / doc) | — |
+| 20 invoices, `MaxConcurrency = 4` | 3709 (185 / doc) | — |
+| Post-processing only (open + metadata + save) | 1.3 | 142 |
+| *For comparison — F2 layout engine: 400 paragraphs + 1500-row table* | *152* | *126* |
+
+Latency when requests arrive with a pause between them (measured separately: 10 conversions of the
+1-page HTML, 500 ms apart): **best 132 ms, median 158 ms**.
+
+What the numbers say:
+
+- **Start the browser once.** Launching Edge costs ~1.6 s; a reused converter answers in ~190 ms.
+  Create one `ChromiumConverter` per application (or use the `HtmlToPdf` facade) and call
+  `WarmUpAsync` at start-up on servers.
+- **The fixed cost is isolation.** Every conversion runs in a new browser context, which starts a
+  renderer process (~100 ms of browser CPU). The converter opens spare contexts ahead of time, so with
+  any pause between requests that cost is hidden (132–158 ms). Back-to-back, the browser has to create
+  them anyway, which is why the warm number stays near 190 ms.
+- **Concurrency helps only a little** (220 → 185 ms per document with 4 tabs): context creation and
+  PDF generation are largely serialized in the browser process. For high volume, run several converters
+  (each with its own browser) rather than raising `MaxConcurrency`.
+- **Post-processing is free.** Re-saving with the LifeOS.Pdf writer (metadata, content-derived `/ID`,
+  reproducible output) costs ~1 ms even for 142 KB; `PostProcess = false` saves nothing measurable.
+- **Large documents are cheap per page.** 1500 table rows cost ~420 ms in total, ~230 ms more than a
+  single page. The F2 layout engine renders the same table in ~150 ms without a browser, so code-built
+  reports remain the fastest path; HTML is for when the template already exists as HTML/CSS.
+- **Byte-identical output** needs the same input, the same `CreationDate` and the same browser version;
+  a browser update may change the bytes (Skia's PDF output differs between versions).
+
+Reproduce: `dotnet run -c Release --project benchmarks/LifeOS.Pdf.Benchmarks -- F11`. The scenarios are
+skipped with a message when no Chrome, Edge or Chromium is installed (`LIFEOS_PDF_CHROMIUM` points to one).

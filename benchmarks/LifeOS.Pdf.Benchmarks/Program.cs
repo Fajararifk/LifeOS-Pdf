@@ -14,6 +14,7 @@ using LifeOS.Pdf.Barcodes;
 using LifeOS.Pdf.Drawing;
 using LifeOS.Pdf.Extraction;
 using LifeOS.Pdf.Fonts;
+using LifeOS.Pdf.Html;
 using LifeOS.Pdf.Images;
 using LifeOS.Pdf.Layout;
 using LifeOS.Pdf.Ocr;
@@ -29,7 +30,8 @@ namespace LifeOS.Pdf.Benchmarks
     /// then N measured iterations; the best time and the allocation of the best run are shown.
     /// Usage: dotnet run -c Release --project benchmarks/LifeOS.Pdf.Benchmarks [-- filter] [--quick]
     /// Phase-10 scenarios need the native PDFium library; the OCR ones also need tessdata
-    /// (set LIFEOS_TESSDATA to its folder) and are skipped when it is absent.
+    /// (set LIFEOS_TESSDATA to its folder) and are skipped when it is absent. Phase-11 scenarios need an
+    /// installed Chrome, Edge or Chromium (or LIFEOS_PDF_CHROMIUM) and are skipped without one.
     /// </summary>
     internal static class Program
     {
@@ -60,6 +62,14 @@ namespace LifeOS.Pdf.Benchmarks
             var scanner = TryCreateScanner();
             var qrPage = TryRender(renderer, QrDoc(40).ToArray(), 0, 200);
             var ocrPage = TryRender(renderer, fivePages, 0, 200);
+
+            // Phase 11: one warm browser per concurrency setting, so only the conversion is measured.
+            var html1 = TryCreateHtml(1);
+            var html4 = TryCreateHtml(4);
+            var simpleHtml = "<h1>Halo</h1><p>Satu halaman sederhana, Rp1.350.000.</p>";
+            var invoiceHtml = InvoiceHtml();
+            var reportHtml = ReportHtml(1500);
+            var htmlPdf = html4?.ConvertHtml(reportHtml);
 
             var scenarios = new List<(string Name, Func<object?> Run)>
             {
@@ -97,6 +107,14 @@ namespace LifeOS.Pdf.Benchmarks
                 ("F10 OCR A4 text @200 DPI", () => OcrPage(ocr, ocrPage)),
                 ("F10 make 3 pages searchable @150 DPI", () => Searchable(ocr, threePages)),
                 ("F10 scan page: render + OCR @150 DPI", () => ScanPage(scanner, fivePages)),
+                ("F11 cold start: launch browser + 1 page", () => ColdStart(simpleHtml)),
+                ("F11 HTML 1 page (warm)", () => Html(html4, simpleHtml)),
+                ("F11 HTML 1 page, PostProcess off", () => Html(html4, simpleHtml, new HtmlToPdfOptions { PostProcess = false })),
+                ("F11 invoice: CSS + data: image + footer", () => Html(html4, invoiceHtml, new HtmlToPdfOptions { FooterHtml = "{page} / {pages}" })),
+                ("F11 report: 1500-row table", () => Html(html4, reportHtml)),
+                ("F11 20 invoices, MaxConcurrency 1", () => HtmlBatch(html1, invoiceHtml, 20)),
+                ("F11 20 invoices, MaxConcurrency 4", () => HtmlBatch(html4, invoiceHtml, 20)),
+                ("F11 post-process only (open + metadata + save)", () => PostProcessOnly(htmlPdf)),
             };
 
             Console.WriteLine("LifeOS.Pdf benchmarks — " + RuntimeName() + (quick ? " (quick)" : string.Empty));
@@ -160,6 +178,8 @@ namespace LifeOS.Pdf.Benchmarks
 
             ocr?.Dispose();
             scanner?.Dispose();
+            html1?.Dispose();
+            html4?.Dispose();
             certificate.Dispose();
             return 0;
         }
@@ -700,6 +720,112 @@ namespace LifeOS.Pdf.Benchmarks
             var doc = PdfDocument.Open(pdf);
             ocr.MakeSearchable(doc, new OcrOptions { Dpi = 150 });
             return doc.ToArray();
+        }
+
+        private static ChromiumConverter? TryCreateHtml(int concurrency)
+        {
+            var converter = new ChromiumConverter(new ChromiumOptions { MaxConcurrency = concurrency });
+            try
+            {
+                converter.WarmUpAsync().GetAwaiter().GetResult();
+                return converter;
+            }
+            catch (HtmlConversionException ex) when (ex.Error == HtmlConversionError.BrowserNotFound || ex.Error == HtmlConversionError.LaunchFailed)
+            {
+                converter.Dispose();
+                return null;
+            }
+        }
+
+        private const string NoBrowser = "no Chrome/Edge/Chromium found (set LIFEOS_PDF_CHROMIUM)";
+
+        private static byte[] ColdStart(string html)
+        {
+            using var converter = new ChromiumConverter();
+            try
+            {
+                return converter.ConvertHtml(html);
+            }
+            catch (HtmlConversionException ex) when (ex.Error == HtmlConversionError.BrowserNotFound || ex.Error == HtmlConversionError.LaunchFailed)
+            {
+                throw new SkipException(NoBrowser);
+            }
+        }
+
+        private static byte[] Html(ChromiumConverter? converter, string html, HtmlToPdfOptions? options = null)
+        {
+            if (converter == null)
+            {
+                throw new SkipException(NoBrowser);
+            }
+
+            return converter.ConvertHtml(html, options);
+        }
+
+        private static int HtmlBatch(ChromiumConverter? converter, string html, int count)
+        {
+            if (converter == null)
+            {
+                throw new SkipException(NoBrowser);
+            }
+
+            var tasks = new System.Threading.Tasks.Task<byte[]>[count];
+            for (var i = 0; i < count; i++)
+            {
+                tasks[i] = converter.ConvertHtmlAsync(html);
+            }
+
+            return System.Threading.Tasks.Task.WhenAll(tasks).GetAwaiter().GetResult().Sum(b => b.Length);
+        }
+
+        // Same work as PdfPostProcessor (internal to LifeOS.Pdf.Html): open, set metadata, save.
+        private static byte[] PostProcessOnly(byte[]? pdf)
+        {
+            if (pdf == null)
+            {
+                throw new SkipException(NoBrowser);
+            }
+
+            var doc = PdfDocument.Open(pdf);
+            doc.Info.Title = "Laporan";
+            doc.Info.Creator = "LifeOS.Pdf.Html";
+            doc.Info.ModificationDate = null;
+            return doc.ToArray();
+        }
+
+        private static string InvoiceHtml()
+        {
+            var png = Convert.ToBase64String(File.ReadAllBytes(Path.Combine(Assets, "badge.png")));
+            var sb = new StringBuilder();
+            sb.Append("<!DOCTYPE html><html><head><meta charset='utf-8'><title>Invoice</title><style>")
+              .Append("body{font-family:Arial,sans-serif;color:#1F2937;font-size:10pt}h1{color:#0F766E}")
+              .Append("table{width:100%;border-collapse:collapse}th{background:#F3F4F6;text-align:left;padding:6px}")
+              .Append("td{padding:6px;border-bottom:1px solid #E5E7EB}.n{text-align:right}")
+              .Append("</style></head><body><img src='data:image/png;base64,").Append(png).Append("' style='height:48px'>")
+              .Append("<h1>INVOICE INV-2026-0042</h1><table><thead><tr><th>Item</th><th class='n'>Qty</th><th class='n'>Jumlah</th></tr></thead><tbody>");
+            for (var i = 1; i <= 12; i++)
+            {
+                sb.Append("<tr><td>Layanan ").Append(i).Append("</td><td class='n'>").Append(i)
+                  .Append("</td><td class='n'>Rp").Append((i * 175_000).ToString("N0", CultureInfo.InvariantCulture)).Append("</td></tr>");
+            }
+
+            return sb.Append("</tbody></table></body></html>").ToString();
+        }
+
+        private static string ReportHtml(int rows)
+        {
+            var sb = new StringBuilder("<!DOCTYPE html><html><head><meta charset='utf-8'><title>Report</title><style>")
+                .Append("body{font-family:Arial,sans-serif;font-size:9pt}table{width:100%;border-collapse:collapse}")
+                .Append("td,th{border:1px solid #D1D5DB;padding:3px}thead{display:table-header-group}")
+                .Append("</style></head><body><h1>Laporan</h1><table><thead><tr><th>No</th><th>Tanggal</th><th>Keterangan</th><th>Jumlah</th></tr></thead><tbody>");
+            for (var i = 1; i <= rows; i++)
+            {
+                sb.Append("<tr><td>").Append(i).Append("</td><td>2026-11-").Append(1 + i % 28)
+                  .Append("</td><td>Transaksi nomor ").Append(i).Append("</td><td>Rp")
+                  .Append((i * 1283 % 2_000_000).ToString("N0", CultureInfo.InvariantCulture)).Append("</td></tr>");
+            }
+
+            return sb.Append("</tbody></table></body></html>").ToString();
         }
 
         private static int ScanPage(DocumentScanner? scanner, byte[] pdf)

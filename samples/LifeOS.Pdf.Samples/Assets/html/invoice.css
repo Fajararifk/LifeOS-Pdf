@@ -1,0 +1,19 @@
+/* Print stylesheet for invoice.html (LifeOS.Pdf.Html sample). */
+@page { size: A4; }
+* { box-sizing: border-box; }
+body { font-family: "Segoe UI", "Noto Sans", Arial, sans-serif; color: #1F2937; font-size: 10.5pt; margin: 0; }
+.band { height: 8px; background: #0F766E; margin-bottom: 18px; }
+header { display: flex; justify-content: space-between; align-items: flex-start; }
+h1 { font-size: 24pt; margin: 0 0 4px; color: #0F766E; }
+.muted { color: #6B7280; }
+.badge { display: inline-block; padding: 3px 10px; border-radius: 999px; background: #CCFBF1; color: #115E59; font-weight: 600; }
+.parties { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 24px 0; }
+.parties h3 { font-size: 9pt; text-transform: uppercase; letter-spacing: .06em; color: #6B7280; margin: 0 0 4px; }
+table { width: 100%; border-collapse: collapse; }
+thead th { background: #F3F4F6; text-align: left; padding: 8px; font-size: 9pt; text-transform: uppercase; color: #374151; }
+tbody td { padding: 8px; border-bottom: 1px solid #E5E7EB; }
+tbody tr:nth-child(even) td { background: #FAFAFA; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tfoot td { padding: 8px; font-weight: 700; }
+tfoot tr.total td { border-top: 2px solid #0F766E; font-size: 12pt; color: #0F766E; }
+.note { margin-top: 28px; padding: 12px 14px; border-left: 4px solid #0F766E; background: #F0FDFA; }

@@ -3,7 +3,7 @@
 An open-source PDF library for .NET, **written from scratch** in C#. The **core
 package has no dependencies** and runs on **.NET Standard 2.0 and .NET 5, 6, 7,
 8, 9 and 10** (and .NET Framework 4.6.1+ through netstandard2.0). The optional
-companion packages (digital signatures, rendering, barcode scanning, OCR) are
+companion packages (digital signatures, rendering, barcode scanning, OCR, HTML → PDF) are
 published separately and may use native libraries.
 
 In development, every generated file is validated with qpdf, pypdf and PDFium
@@ -26,7 +26,7 @@ dotnet add package LifeOS.Pdf
 
 The core package is **100% managed code with no dependencies** and needs nothing
 else on a developer machine or a server, so it runs on Linux, Windows, macOS,
-Docker and serverless hosts alike. Optional companion packages (Phase 9–10) are
+Docker and serverless hosts alike. Optional companion packages (Phase 9–11) are
 installed separately and may use native libraries:
 
 ```bash
@@ -35,9 +35,10 @@ dotnet add package LifeOS.Pdf.Rendering        # PDF → PNG (PDFium)
 dotnet add package LifeOS.Pdf.Barcode.Scanning # read QR/barcodes (zxing-cpp)
 dotnet add package LifeOS.Pdf.Ocr              # OCR (Tesseract)
 dotnet add package LifeOS.Pdf.Scanning         # render + barcode + OCR
+dotnet add package LifeOS.Pdf.Html             # HTML/CSS → PDF (installed Chrome/Edge/Chromium, .NET 8+)
 ```
 
-Or install the core and all five companions at once (.NET 8+):
+Or install the core and all six companions at once (.NET 8+):
 
 ```bash
 dotnet add package LifeOS.Pdf.All
@@ -46,7 +47,7 @@ dotnet add package LifeOS.Pdf.All
 ## Usage
 
 Read the **[step-by-step tutorial](docs/tutorial.md)** — one runnable example for every
-feature, from your first PDF to forms, encryption and scanned documents.
+feature, from your first PDF to forms, encryption, scanned documents and HTML → PDF.
 
 ## Status
 
@@ -63,7 +64,7 @@ feature, from your first PDF to forms, encryption and scanned documents.
 | 8 | Forms: create, fill, flatten | ✅ v0.9 |
 | 9 | Encryption (password) & digital signatures | ✅ v1.0 |
 | 10 | Render to images, read QR/barcodes, OCR (separate packages) | ✅ v1.1 |
-| 11 | HTML → PDF (wkhtmltopdf & Chromium, separate package) | planned |
+| 11 | HTML → PDF via headless Chrome/Edge/Chromium (separate package); wkhtmltopdf backend → 11b | ✅ v1.2 |
 | 12 | Office → PDF: Excel/CSV, Word, PowerPoint; Word templates (mail merge) — separate package | planned |
 | 13 | Vector charts, Markdown → PDF, PDF tables → Excel | planned |
 | 14 | PDF/A, PDF/UA, gradients, layers, e-invoicing | planned |
